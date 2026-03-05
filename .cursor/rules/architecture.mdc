@@ -1,0 +1,537 @@
+---
+alwaysApply: true
+---
+
+# Architecture Rules — Chain-to-Cloud Voting
+
+This file defines the **authoritative architecture context** for this repository.
+
+Cursor AI and developers should treat this file as the **source of truth for architectural decisions, system boundaries, and technology choices**.
+
+All generated code, services, and infrastructure should align with the principles described here.
+
+---
+
+# 1. Project Overview
+
+## One-Sentence Pitch
+
+A **multi-cloud, event-driven system** where a blockchain voting smart contract emits events that are ingested into AWS serverless infrastructure, distributed through an event bus, and processed by independent microservices across AWS and GCP using a CQRS architecture.
+
+---
+
+# 2. Project Goals
+
+This project is designed to demonstrate **senior-level cloud architecture skills**.
+
+Primary goals:
+
+- Blockchain used as **immutable event source**
+- Event-driven architecture
+- Microservices with **clear bounded responsibilities**
+- Multi-cloud architecture (AWS + GCP)
+- Observability-first design
+- Infrastructure as Code
+- Production-style operational mindset
+
+The project is intentionally designed as a **realistic cloud-native system** rather than a simple demo.
+
+---
+
+# 3. Non-Goals
+
+To keep the project achievable:
+
+Not included:
+
+- Complex frontend applications
+- Enterprise compliance frameworks
+- ML pipelines or full data lake architecture
+- Large-scale identity management
+
+A minimal API and dashboards are sufficient.
+
+---
+
+# 4. Core Architectural Principles
+
+## Event-Driven Design
+
+The blockchain acts as the **event source**.
+
+All downstream services operate on **events**, not synchronous RPC calls.
+
+This ensures:
+
+- decoupling
+- resilience
+- replayability (future Kafka upgrade)
+- scalability
+
+---
+
+## CQRS Separation
+
+Two distinct projections exist:
+
+### Operational Projection (AWS)
+
+Purpose:
+
+Fast queries for application state.
+
+Handled by:
+
+Aggregator Service
+
+Storage:
+
+DynamoDB
+
+---
+
+### Analytical Projection (GCP)
+
+Purpose:
+
+Historical analysis and trends.
+
+Handled by:
+
+Analytics Service
+
+Storage:
+
+BigQuery
+
+---
+
+## Multi-Cloud with Clear Responsibilities
+
+The system intentionally distributes workloads:
+
+AWS:
+
+Operational workloads
+
+GCP:
+
+Analytics workloads
+
+This prevents redundant duplication across clouds.
+
+---
+
+# 5. High Level Architecture
+
+## MVP Architecture
+
+Blockchain Smart Contract
+│
+│ RPC/WebSocket
+▼
+Ingestion Lambda (AWS)
+│
+▼
+Event Bus (SQS)
+│
+▼
+Aggregator Service (Go)
+│
+▼
+DynamoDB
+│
+▼
+API Gateway
+
+---
+
+## Phase 2 Architecture
+
+SQS
+│
+▼
+Forwarder Lambda
+│
+▼
+GCP Pub/Sub
+│
+▼
+Analytics Service (Go)
+│
+▼
+BigQuery
+
+---
+
+## Optional Phase 3
+
+Kafka event backbone:
+
+Blockchain → Kafka → Consumers
+
+
+Kafka enables:
+
+- replay
+- consumer lag metrics
+- stronger event log semantics
+
+---
+
+# 6. Technology Stack
+
+## Blockchain
+
+Language:
+
+Rust
+
+Framework:
+
+Solana Anchor (preferred)
+
+Alternative:
+
+Polkadot / Substrate
+
+Smart contracts must emit structured events.
+
+---
+
+## AWS
+
+Used for operational processing.
+
+Components:
+
+- Lambda
+- SQS
+- DynamoDB
+- API Gateway
+- CloudWatch
+- IAM
+
+---
+
+## GCP
+
+Used for analytics processing.
+
+Components:
+
+- Cloud Run
+- Pub/Sub
+- BigQuery
+- Cloud Monitoring
+
+---
+
+## Infrastructure
+
+Infrastructure must be defined using:
+
+Terraform
+
+Infrastructure directories:
+
+infra/aws
+infra/gcp
+
+
+---
+
+## CI/CD
+
+CI/CD pipeline must use:
+
+GitHub Actions
+
+Capabilities:
+
+- lint
+- test
+- build
+- terraform plan/apply
+- deploy services
+
+Authentication should prefer:
+
+OIDC federation
+
+Avoid static credentials.
+
+---
+
+# 7. Services Overview
+
+## Ingestion Service
+
+Runtime:
+
+AWS Lambda
+
+Responsibilities:
+
+- connect to blockchain RPC/WebSocket
+- detect contract events
+- normalize events
+- publish messages to SQS
+
+It must not perform business logic.
+
+---
+
+## Aggregator Service
+
+Language:
+
+Go
+
+Location:
+
+AWS
+
+Responsibilities:
+
+- consume events from SQS
+- maintain operational projections
+- update DynamoDB
+
+This service maintains **real-time state**.
+
+---
+
+## Forwarder Service
+
+Runtime:
+
+AWS Lambda
+
+Responsibilities:
+
+- consume events from SQS
+- forward them to GCP Pub/Sub
+
+This creates the **cross-cloud event bridge**.
+
+---
+
+## Analytics Service
+
+Language:
+
+Go
+
+Location:
+
+GCP Cloud Run
+
+Responsibilities:
+
+- consume Pub/Sub events
+- write raw data to BigQuery
+- generate analytical tables
+
+---
+
+# 8. Smart Contract Design
+
+The voting contract is intentionally simple.
+
+Functions:
+
+create_proposal(title, options[])
+vote(proposal_id, option_id)
+close_proposal(proposal_id)
+
+
+Events emitted:
+
+ProposalCreated
+VoteCast
+ProposalClosed
+
+
+Events must be **data-rich**.
+
+---
+
+# 9. Event Schema
+
+Example VoteCast event:
+
+```json
+{
+  "proposal_id": "string",
+  "option_id": "string",
+  "voter_pubkey": "string",
+  "timestamp": "unix_time",
+  "block_number": "number",
+  "tx_signature": "string"
+}
+
+Downstream systems must treat events as immutable.
+
+---
+
+# 10. Data Storage
+
+## DynamoDB (Operational)
+
+Tables:
+
+### Proposals
+
+Partition Key:
+
+proposal_id
+
+Attributes:
+
+total_votes
+option_counts
+status
+updated_at
+
+---
+
+### VoterActivity
+
+Partition Key:
+
+voter_pubkey
+
+Attributes:
+
+votes_cast
+last_vote_timestamp
+
+---
+
+## BigQuery (Analytics)
+
+Tables:
+
+### votes_raw
+
+Columns:
+
+proposal_id
+option_id
+voter_pubkey
+timestamp
+slot
+tx_signature
+
+---
+
+### proposal_trends
+
+Columns:
+
+proposal_id
+window_start
+votes_per_minute
+voter_growth_rate
+anomaly_flag
+
+---
+
+# 11. Observability
+
+Observability is a core requirement.
+
+Grafana should provide cross-cloud dashboards.
+
+Datasources:
+
+AWS CloudWatch
+GCP Monitoring
+BigQuery
+
+Key metrics:
+
+vote throughput
+end-to-end latency
+SQS queue depth
+DLQ events
+error rate
+active voters
+
+---
+
+# 12. Idempotency Requirements
+
+Because SQS provides at-least-once delivery, services must be idempotent.
+
+Strategies include:
+
+event deduplication
+
+transaction id tracking
+
+upsert operations
+
+No service may assume exactly-once delivery.
+
+---
+
+# 13. Repository Structure
+
+Expected repository structure:
+
+repo/
+  smart-contract/
+  services/
+    ingestion/
+    aggregator/
+    analytics/
+    forwarder/
+  infra/
+    aws/
+    gcp/
+  grafana/
+    dashboards/
+  docs/
+    ADR/
+    diagrams/
+  .github/workflows/
+
+---
+
+# 14. Future Extensions
+
+Possible future improvements:
+
+Kafka event backbone
+
+schema registry
+
+replay capability
+
+anomaly detection
+
+load simulation tools
+
+These should not complicate the MVP.
+
+---
+
+# 15. Design Philosophy
+
+The architecture intentionally balances:
+
+realism
+
+learning value
+
+achievable complexity
+
+The system should feel like a production-grade cloud architecture, even though it runs at small scale.
+
+---
+
+# End of Architecture Rules
+
+---
