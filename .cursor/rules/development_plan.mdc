@@ -61,8 +61,9 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 
 ### Event bus (AWS)
 
-- **SQS:** Main queue for voting events; DLQ configured; visibility timeout and redrive policy aligned with consumer processing time.
-- **Terraform:** Queue(s), IAM policies, outputs for queue URL.
+- **Fan-out:** Ingestion publishes to one **SNS topic**; two **SQS queues** subscribe (one for Aggregator, one for Forwarder) so both consumers receive every event. Alternatively, ingestion may publish to two SQS queues. Do not use a single SQS queue for both consumers.
+- **SQS:** Each queue has DLQ, visibility timeout and redrive policy aligned with consumer processing time.
+- **Terraform:** SNS topic, two SQS queues (and subscriptions), IAM policies, outputs for queue URLs.
 
 ### Aggregator service
 
@@ -103,7 +104,7 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 
 ## 2.1 Scope Summary
 
-- Forwarder reads from SQS and publishes to GCP Pub/Sub.
+- Forwarder reads from its **own** SQS queue (subscribed to the same SNS topic as the Aggregator queue) and publishes to GCP Pub/Sub.
 - Analytics service consumes Pub/Sub, writes raw events to BigQuery, maintains derived analytical tables.
 - GCP infrastructure and CI/CD for forwarder and analytics; cross-cloud observability.
 

@@ -1,0 +1,94 @@
+---
+description: When and how to write Architecture Decision Records (ADRs)
+globs:
+  - "docs/ADR/**"
+  - "docs/**"
+  - "infra/**"
+  - "services/**"
+  - "smart-contract/**"
+alwaysApply: false
+---
+
+# ADR Process — Architecture Decision Records
+
+This project uses **Architecture Decision Records (ADRs)** to document significant architectural and technology decisions. `system_context.mdc` and `architecture.mdc` require an ADR for changes to architectural principles; this rule defines **when** to write one and **how**.
+
+---
+
+## When to Write an ADR
+
+Write an ADR when you:
+
+- Introduce or change a **service boundary** (new service, new responsibility, new integration).
+- Change **event schema** or event flow in a way that affects multiple services.
+- Choose or change **technology** (e.g. Kafka vs SQS, new runtime, new data store).
+- Change **cross-cloud** or **cross-service** communication (e.g. new queue, new topic).
+- Define **migration strategy** (e.g. SQS → Kafka, dual-write period).
+- Change **security or credentials** approach (e.g. OIDC, secret storage).
+- Make a decision that **future maintainers** must understand to avoid reverting or conflicting changes.
+
+Do **not** write an ADR for:
+
+- Routine bug fixes, refactors, or dependency upgrades with no architectural impact.
+- Purely cosmetic or documentation-only changes.
+
+When in doubt, prefer writing a short ADR; it can be marked *Superseded* later.
+
+---
+
+## Where ADRs Live
+
+- **Path:** `docs/ADR/`
+- **Naming:** `NNNN-short-title-in-kebab-case.md` (e.g. `0001-use-sqs-for-event-bus.md`, `0002-add-kafka-backbone.md`).
+- **Numbering:** Sequential; use the next free number. No reuse of numbers.
+
+---
+
+## ADR Format (Required Sections)
+
+Each ADR must contain at least:
+
+1. **Title** — One line; same as filename without number.
+2. **Status** — One of: `Proposed` | `Accepted` | `Deprecated` | `Superseded by [NNNN]`.
+3. **Context** — What situation or problem led to this decision (2–5 sentences).
+4. **Decision** — What we decided to do (clear, actionable).
+5. **Consequences** — Benefits, drawbacks, and follow-up (e.g. what we must do in code/infra/docs).
+
+Optional but recommended:
+
+- **Alternatives considered** — What we rejected and why (brief).
+- **References** — Links to docs, tickets, or other ADRs.
+
+Keep ADRs **short** (one page preferred). Use bullet points.
+
+---
+
+## Example Snippet
+
+```markdown
+# Use SQS for event bus (MVP)
+
+- **Status:** Accepted
+- **Context:** We need a buffer between ingestion and aggregator; must support at-least-once delivery and DLQ.
+- **Decision:** Use AWS SQS as the event bus for Phase 1. Single queue; DLQ enabled.
+- **Consequences:** Aggregator must be idempotent; no ordering guarantee across proposals. Future: Kafka considered for Phase 3.
+```
+
+---
+
+## Process for the Agent and Developers
+
+- When proposing or implementing a change that **affects architecture** (services, events, infra, security), check if an ADR is needed.
+- If yes: create or update a file in `docs/ADR/` using the format above before or in the same change that implements the decision.
+- Reference the ADR in code comments or `docs/progress/` when the decision drives concrete work.
+
+---
+
+## References
+
+- Architectural constraints: `system_context.mdc` (changes require ADR).
+- Repository structure: `architecture.mdc` §13 (`docs/ADR/`).
+
+---
+
+# End of ADR Process

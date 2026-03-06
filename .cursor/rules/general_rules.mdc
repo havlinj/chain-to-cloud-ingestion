@@ -1,0 +1,51 @@
+---
+description: Repository-wide rules — language, conventions that apply everywhere
+globs:
+  - "**"
+alwaysApply: true
+---
+
+# General Rules — Repository-Wide
+
+These rules apply to **the entire repository**. All contributors and the AI agent must follow them.
+
+---
+
+## Language: English Everywhere
+
+**English must be used in all of the following:**
+
+- **Code** — identifiers, variables, functions, types, packages, modules
+- **Comments** — in source code, config files, and infrastructure
+- **Documentation** — README files, docs in `docs/`, ADRs in `docs/ADR/`, progress notes
+- **Tests** — test names, test data descriptions, assertions and error messages
+- **Commit messages** — summary and body
+- **Pull request titles and descriptions** — and issue titles/descriptions when tracked in the repo
+- **Cursor rules** — content of `.cursor/rules/` (this file and all other rule files)
+- **Configuration and infrastructure** — Terraform variables, resource names (except where a cloud provider requires a specific format), comments in `.tf` / `.yaml` / `.json`
+
+User-facing strings (e.g. API error messages, log messages intended for operators) must also be in English.
+
+**Rationale:** Single language avoids mixed-language codebases, simplifies onboarding and tooling, and keeps the project consistent for open source or distributed teams.
+
+---
+
+## Scope of This File
+
+`general_rules.mdc` is the place for rules that:
+
+- Apply to every part of the repo (not just one service, language, or layer).
+- Do not fit better in a specialized rule (e.g. architecture, security, ADR, coding style).
+
+Further repo-wide conventions may be added here over time (e.g. branch naming, file naming, or documentation location). Keep this file short and high-level; refer to other rules for details.
+
+---
+
+## References
+
+- Code and identifier style: `coding_style.mdc`
+- Test naming and language: `testing/testing_general.mdc`
+
+---
+
+# End of General Rules

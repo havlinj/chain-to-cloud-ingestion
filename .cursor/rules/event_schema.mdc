@@ -81,7 +81,9 @@ Example:
 
 # 5. VoteCast Event
 
-Example payload:
+Use **slot** (Solana slot number) for chain position; do not use block_number.
+
+Example payload (with required metadata in envelope):
 
 ```json
 {
@@ -90,7 +92,7 @@ Example payload:
   "option_id": "1",
   "voter_pubkey": "wallet123",
   "timestamp": 1700000000,
-  "block_number": 100234,
+  "slot": 100234,
   "tx_signature": "txabc"
 }
 ```

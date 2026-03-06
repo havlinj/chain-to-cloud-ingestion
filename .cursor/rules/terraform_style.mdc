@@ -123,11 +123,7 @@ Core resources:
 
 # 9. IAM Best Practices
 
-Never allow:
-
-":"
-
-Policies must be minimal.
+Never allow wildcard actions or resource ARNs (e.g. `*:*`, `s3:*`, or `*` on resources). IAM policies must be minimal and scoped to specific actions and resources.
 
 ---
 

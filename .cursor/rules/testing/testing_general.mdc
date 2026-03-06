@@ -28,7 +28,7 @@ Testing must validate:
 - resilience to partial failure
 - maintainability of behavior over time
 
-English must be used in:
+English must be used in tests (see `general_rules.mdc` for repo-wide language rule):
 - test names
 - comments
 - test data descriptions

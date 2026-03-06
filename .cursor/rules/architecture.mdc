@@ -131,6 +131,18 @@ This prevents redundant duplication across clouds.
 
 # 5. High Level Architecture
 
+## Event Bus Fan-Out
+
+Both **Aggregator** and **Forwarder** must receive every event. A single SQS queue delivers each message to only one consumer. Therefore the event bus uses **fan-out**:
+
+- **Ingestion** publishes each normalized event to an **SNS topic** (or, alternatively, to two SQS queues).
+- **Two SQS queues** subscribe to that topic (or are fed separately): one for the Aggregator, one for the Forwarder.
+- **Aggregator** consumes from its queue; **Forwarder** consumes from its queue. Both receive the same stream of events.
+
+Infrastructure (Terraform) must implement either: (a) one SNS topic + two SQS subscriptions, or (b) ingestion publishing to two SQS queues. Per-service allowed/forbidden behavior: see **service_boundaries.mdc**.
+
+---
+
 ## MVP Architecture
 
 Blockchain Smart Contract
@@ -140,22 +152,17 @@ Blockchain Smart Contract
 Ingestion Lambda (AWS)
 │
 ▼
-Event Bus (SQS)
+SNS Topic (voting-events)
 │
-▼
-Aggregator Service (Go)
+├────────► SQS (aggregator) ──────► Aggregator Service (Go) ──► DynamoDB ──► API Gateway
 │
-▼
-DynamoDB
-│
-▼
-API Gateway
+└────────► SQS (forwarder)  ──────► Forwarder Lambda ──────────► (Phase 2: GCP Pub/Sub)
 
 ---
 
 ## Phase 2 Architecture
 
-SQS
+SQS (forwarder queue, from SNS)
 │
 ▼
 Forwarder Lambda
@@ -366,19 +373,26 @@ Events must be **data-rich**.
 
 # 9. Event Schema
 
-Example VoteCast event:
+All events must include the **canonical envelope** (event_id, event_type, timestamp, source, version). Full field definitions and evolution rules: **event_schema.mdc**.
+
+Example VoteCast event (envelope + payload):
 
 ```json
 {
+  "event_id": "uuid",
+  "event_type": "VoteCast",
+  "timestamp": 1700000000,
+  "source": "voting-contract",
+  "version": 1,
   "proposal_id": "string",
   "option_id": "string",
   "voter_pubkey": "string",
-  "timestamp": "unix_time",
-  "block_number": "number",
+  "slot": 100234,
   "tx_signature": "string"
 }
+```
 
-Downstream systems must treat events as immutable.
+(Solana uses **slot**; do not use block_number.) Downstream systems must treat events as immutable. Full schema: **event_schema.mdc**.
 
 ---
 

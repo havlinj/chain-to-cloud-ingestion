@@ -19,7 +19,7 @@ All backend services must be written in:
 
 Minimum version:
 
-Go 1.25+
+Go 1.21+
 
 ---
 
