@@ -62,3 +62,9 @@ That belongs to lower test layers.
 ## Final Principle
 
 Use E2E tests to prove the pipeline works, not to replace focused testing at lower levels.
+
+---
+
+# End of End-to-End Testing
+
+---

@@ -1,4 +1,5 @@
 ---
+title: Development Plan
 description: Development plan — phased implementation aligned with High Level Architecture (architecture.mdc §5)
 globs:
   - "smart-contract/**"
@@ -231,3 +232,5 @@ Each phase delivers a **shippable slice**: Phase 1 = operational system on AWS; 
 ---
 
 # End of Development Plan
+
+---

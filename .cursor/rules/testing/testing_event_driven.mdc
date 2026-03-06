@@ -141,3 +141,9 @@ The critical tests are:
 - retry safety
 - malformed event handling
 - backwards compatibility
+
+---
+
+# End of Event-Driven Testing
+
+---

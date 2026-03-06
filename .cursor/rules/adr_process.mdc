@@ -1,4 +1,5 @@
 ---
+title: ADR Process
 description: When and how to write Architecture Decision Records (ADRs)
 globs:
   - "docs/ADR/**"
@@ -92,3 +93,5 @@ Keep ADRs **short** (one page preferred). Use bullet points.
 ---
 
 # End of ADR Process
+
+---

@@ -339,3 +339,9 @@ Services must remain:
 - **event-driven**
 
 If a service starts performing multiple responsibilities, the architecture likely requires **introducing a new service** rather than expanding an existing one.
+
+---
+
+# End of Service Boundaries
+
+---

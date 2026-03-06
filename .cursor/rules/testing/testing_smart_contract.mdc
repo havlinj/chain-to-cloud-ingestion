@@ -69,3 +69,9 @@ Test:
 ## Final Principle
 
 The contract must be tested both for state transitions and for event correctness, because downstream cloud services rely on those events.
+
+---
+
+# End of Smart Contract Testing
+
+---

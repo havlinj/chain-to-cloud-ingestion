@@ -1,4 +1,5 @@
 ---
+title: Architecture Rules
 description: Global architecture rules for the Chain-to-Cloud Voting multi-cloud event-driven system
 globs:
   - "smart-contract/**"

@@ -210,7 +210,7 @@ Forbidden:
 
 - Events are immutable facts.
 - Consumers must ignore unknown fields.
--Event schema MUST be backwards compatible.
+- Event schema MUST be backwards compatible.
 
 Mandatory metadata (in all events):
 - event_id
@@ -236,3 +236,9 @@ Allowed schema changes:
 - Include correlation fields to trace an event end-to-end.
 - Expose basic metrics where feasible (CloudWatch / GCP Monitoring).
 - Failures must be visible: log + metrics + DLQ (where applicable).
+
+---
+
+# End of Coding Style & Conventions
+
+---

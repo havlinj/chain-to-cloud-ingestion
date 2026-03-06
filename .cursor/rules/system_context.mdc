@@ -1,4 +1,3 @@
-
 ---
 title: System Context
 description: High-level system context and service interaction model for the Chain-to-Cloud Voting system.
@@ -47,3 +46,9 @@ This document gives the **mental model** of the project. For detailed flows, tec
 
 - **architecture.mdc** — High-level architecture, §5 event bus fan-out and diagrams, §9 event schema, §10 data storage, technology stack, observability.
 - **service_boundaries.mdc** — Allowed and forbidden responsibilities per service (Ingestion, Aggregator, Forwarder, Analytics, Smart Contract).
+
+---
+
+# End of System Context
+
+---

@@ -1,4 +1,5 @@
 ---
+title: Service Development Rules
 description: Coding standards for Go microservices
 globs:
   - "services/**/*.go"
@@ -266,3 +267,5 @@ encoding/json
 ---
 
 # End of Service Rules
+
+---

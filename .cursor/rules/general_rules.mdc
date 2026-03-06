@@ -1,4 +1,5 @@
 ---
+title: General Rules
 description: Repository-wide rules — language, conventions that apply everywhere
 globs:
   - "**"
@@ -49,3 +50,5 @@ Further repo-wide conventions may be added here over time (e.g. branch naming, f
 ---
 
 # End of General Rules
+
+---
