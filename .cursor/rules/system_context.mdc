@@ -1,0 +1,396 @@
+
+---
+title: System Context
+description: High-level system context and service interaction model for the Chain-to-Cloud Voting system.
+globs:
+  - "services/**"
+  - "smart-contract/**"
+  - "infra/**"
+alwaysApply: true
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [system-context, architecture, microservices, event-driven]
+cursor:
+  version: 1.0.0
+  features: [system-understanding, code-generation-guidance]
+  experimental: false
+---
+
+# System Context
+
+This document describes the **system-level mental model** of the project.
+
+It helps Cursor and developers understand:
+
+- what components exist
+- what their responsibilities are
+- how they interact
+- what boundaries must be respected
+
+The system is **event-driven and multi-cloud**.
+
+---
+
+# High-Level System Overview
+
+The system processes **voting activity from a blockchain smart contract** and builds two projections:
+
+1. **Operational projection** (real-time state)
+2. **Analytical projection** (historical trends)
+
+Events originate on the blockchain and flow through a cloud-based event pipeline.
+
+---
+
+# System Flow
+
+Blockchain Smart Contract
+│
+│ RPC / WebSocket
+▼
+Ingestion Service (AWS Lambda)
+│
+▼
+Event Bus (AWS SQS)
+│
+├────────► Aggregator Service (Go / AWS)
+│ │
+│ ▼
+│ DynamoDB
+│ │
+│ ▼
+│ Read API
+│
+▼
+Forwarder Service (AWS Lambda)
+│
+▼
+GCP Pub/Sub
+│
+▼
+Analytics Service (Go / Cloud Run)
+│
+▼
+BigQuery
+
+---
+
+# System Components
+
+## Smart Contract
+
+Location:
+
+
+smart-contract/
+
+
+Language:
+
+Rust
+
+Responsibilities:
+
+- manage proposals
+- record votes
+- emit structured events
+
+Important rule:
+
+The smart contract is the **source of truth for voting events**.
+
+Cloud services must treat blockchain events as immutable facts.
+
+---
+
+## Ingestion Service
+
+Location:
+
+
+services/ingestion/
+
+
+Runtime:
+
+AWS Lambda
+
+Responsibilities:
+
+- connect to blockchain RPC/WebSocket
+- detect relevant contract events
+- normalize event format
+- publish events to SQS
+
+Important rules:
+
+- No business logic
+- No projections
+- Only ingestion and normalization
+
+---
+
+## Event Bus
+
+Technology:
+
+AWS SQS
+
+Purpose:
+
+- buffering
+- decoupling
+- retry handling
+- DLQ support
+
+Delivery guarantee:
+
+**at-least-once**
+
+All consumers must therefore be **idempotent**.
+
+---
+
+## Aggregator Service
+
+Location:
+
+services/aggregator/
+
+
+Language:
+
+Go
+
+Cloud:
+
+AWS
+
+Responsibilities:
+
+- consume events from SQS
+- update operational projections
+- maintain real-time voting state
+
+Data store:
+
+DynamoDB
+
+Example projections:
+
+- vote counts per proposal
+- proposal status
+- voter activity
+
+This service provides the **operational read model**.
+
+---
+
+## Forwarder Service
+
+Location:
+
+services/forwarder/
+
+Runtime:
+
+AWS Lambda
+
+Responsibilities:
+
+- read events from SQS
+- publish events to GCP Pub/Sub
+
+This service acts as a **cross-cloud event bridge**.
+
+---
+
+## Analytics Service
+
+Location:
+
+services/analytics/
+
+Language:
+
+Go
+
+Cloud:
+
+GCP Cloud Run
+
+Responsibilities:
+
+- consume Pub/Sub events
+- store raw events in BigQuery
+- compute analytical tables
+
+Example analytics:
+
+- votes per minute
+- voter growth
+- proposal popularity trends
+
+This service provides the **analytical projection**.
+
+---
+
+# Data Stores
+
+## DynamoDB
+
+Used for **operational state**.
+
+Characteristics:
+
+- fast reads
+- low latency
+- simple projections
+
+Used by:
+
+Aggregator Service
+
+---
+
+## BigQuery
+
+Used for **analytics and historical queries**.
+
+Characteristics:
+
+- columnar storage
+- large analytical queries
+- time-series analysis
+
+Used by:
+
+Analytics Service
+
+---
+
+# Service Communication Model
+
+Services communicate **only via events**.
+
+Forbidden patterns:
+
+- synchronous service-to-service HTTP calls
+- tight coupling between services
+- direct cross-cloud RPC
+
+Allowed patterns:
+
+- event consumption
+- event transformation
+- projection updates
+
+---
+
+# Event Lifecycle
+
+1. Vote happens on blockchain
+2. Smart contract emits event
+3. Ingestion service captures event
+4. Event is normalized and sent to SQS
+5. Aggregator updates operational state
+6. Forwarder sends event to GCP
+7. Analytics service stores event and computes trends
+
+Events are never modified during the process.
+
+---
+
+# Service Independence Rules
+
+Each service must be deployable independently.
+
+Services must not assume:
+
+- the availability of other services
+- ordering guarantees beyond event stream semantics
+- exactly-once delivery
+
+Services must tolerate:
+
+- duplicate events
+- delayed events
+- partial failures
+
+---
+
+# Data Ownership
+
+Each service owns its own data.
+
+Aggregator owns:
+
+DynamoDB projections
+
+Analytics owns:
+
+
+BigQuery datasets
+
+
+Services must not write into each other's storage.
+
+---
+
+# Observability Context
+
+The system is expected to expose operational metrics.
+
+Important signals:
+
+- event throughput
+- processing latency
+- queue depth
+- failure rate
+- DLQ activity
+
+These signals should be visible through **Grafana dashboards**.
+
+---
+
+# System Boundaries
+
+The system interacts with:
+
+External system:
+
+- Blockchain RPC endpoint
+
+Internal systems:
+
+- AWS infrastructure
+- GCP infrastructure
+
+Services should not directly depend on internal implementation details of other services.
+
+---
+
+# Architectural Constraints
+
+The system must maintain:
+
+- event-driven architecture
+- clear service boundaries
+- idempotent consumers
+- multi-cloud separation of responsibilities
+
+Changes to these principles require an **Architecture Decision Record (ADR)**.
+
+---
+
+# Final Mental Model
+
+Think of the system as:
+
+**Blockchain → Event Stream → Projections**
+
+Where:
+
+- AWS maintains operational state
+- GCP maintains analytical state
+- events connect everything

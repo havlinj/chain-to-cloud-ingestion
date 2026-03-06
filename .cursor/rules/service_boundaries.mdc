@@ -1,0 +1,341 @@
+---
+title: Service Boundaries
+description: Defines strict responsibilities and forbidden behaviors for each service in the Chain-to-Cloud Voting architecture.
+globs:
+  - "services/**"
+  - "smart-contract/**"
+alwaysApply: true
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [architecture, service-boundaries, microservices, event-driven]
+cursor:
+  version: 1.0.0
+  features: [architecture-enforcement, code-generation-guidance]
+  experimental: false
+---
+
+# Service Boundaries
+
+This document defines **strict responsibilities and constraints for each service**.
+
+It ensures the system remains:
+
+- event-driven
+- loosely coupled
+- multi-cloud compatible
+- maintainable
+
+When generating code, Cursor must **respect these boundaries**.
+
+---
+
+# Global Rules
+
+These rules apply to **all services**.
+
+## Event-Driven Communication
+
+Services must communicate **only via events**.
+
+Forbidden:
+
+- direct service-to-service HTTP calls
+- synchronous RPC between microservices
+- direct cross-cloud calls between services
+
+Allowed:
+
+- consuming events
+- publishing events
+- updating projections
+
+---
+
+## Service Independence
+
+Each service must:
+
+- be deployable independently
+- tolerate duplicate events
+- tolerate delayed events
+- tolerate partial system failures
+
+Services must **never assume ordering guarantees beyond event stream semantics**.
+
+---
+
+## Data Ownership
+
+Each service owns its own data store.
+
+Forbidden:
+
+- writing to another service's database
+- querying another service's database directly
+
+---
+
+# Smart Contract Boundary
+
+Location:
+
+smart-contract/
+
+Language:
+
+Rust
+
+Responsibilities:
+
+- manage proposals
+- record votes
+- emit events
+
+Forbidden:
+
+- complex analytics logic
+- off-chain integrations
+- external HTTP calls
+
+The smart contract must remain **simple and deterministic**.
+
+---
+
+# Ingestion Service Boundary
+
+Location:
+
+services/ingestion/
+
+Primary responsibility:
+
+Capture blockchain events and publish them to the event bus.
+
+Allowed responsibilities:
+
+- connect to blockchain RPC/WebSocket
+- filter relevant contract events
+- normalize event format
+- publish events to SQS
+
+Forbidden responsibilities:
+
+- business logic
+- projections
+- database storage
+- analytics
+- cross-cloud communication
+
+The ingestion service is strictly **an adapter from blockchain → event bus**.
+
+---
+
+# Aggregator Service Boundary
+
+Location:
+
+services/aggregator/
+
+Cloud:
+
+AWS
+
+Language:
+
+Go
+
+Primary responsibility:
+
+Maintain the **operational projection** of the system.
+
+Allowed responsibilities:
+
+- consume events from SQS
+- update DynamoDB projections
+- maintain vote counts
+- maintain proposal state
+- expose read APIs
+
+Forbidden responsibilities:
+
+- analytics queries
+- BigQuery writes
+- cross-cloud communication
+- calling analytics service
+- modifying blockchain state
+
+Aggregator owns the **real-time operational view of the system**.
+
+---
+
+# Forwarder Service Boundary
+
+Location:
+
+services/forwarder/
+
+Primary responsibility:
+
+Forward events from AWS to GCP.
+
+Allowed responsibilities:
+
+- read events from SQS
+- publish events to Pub/Sub
+- minimal event transformation if required
+
+Forbidden responsibilities:
+
+- analytics logic
+- projections
+- database storage
+- business rules
+
+The forwarder is a **stateless transport bridge**.
+
+---
+
+# Analytics Service Boundary
+
+Location:
+
+services/analytics/
+
+Cloud:
+
+GCP
+
+Language:
+
+Go
+
+Primary responsibility:
+
+Generate **analytical projections**.
+
+Allowed responsibilities:
+
+- consume Pub/Sub events
+- store raw events in BigQuery
+- compute derived analytical tables
+
+Examples:
+
+- votes per minute
+- voter growth
+- proposal popularity
+
+Forbidden responsibilities:
+
+- operational state management
+- DynamoDB access
+- calling aggregator service
+- modifying blockchain state
+
+Analytics service operates on **historical event streams**.
+
+---
+
+# Event Bus Boundary
+
+Technologies:
+
+- AWS SQS
+- GCP Pub/Sub
+
+Responsibilities:
+
+- buffering
+- decoupling services
+- retry handling
+- DLQ management
+
+Services must treat the event bus as:
+
+**an append-only stream of events**
+
+---
+
+# Cross-Cloud Boundary
+
+The system intentionally separates workloads:
+
+AWS responsibilities:
+
+- ingestion
+- operational projection
+- DynamoDB storage
+
+GCP responsibilities:
+
+- analytics
+- BigQuery storage
+
+Services should not bypass this separation.
+
+---
+
+# Architectural Anti-Patterns
+
+The following patterns must **never be introduced**.
+
+## Tight Coupling
+
+Forbidden:
+
+- aggregator calling analytics
+- analytics calling aggregator
+- services sharing databases
+
+---
+
+## Business Logic in Adapters
+
+Forbidden locations for business logic:
+
+- ingestion service
+- forwarder service
+
+Business rules must live in **domain/application layers of services**.
+
+---
+
+## Cross-Service Database Access
+
+Forbidden examples:
+
+- analytics reading DynamoDB
+- aggregator reading BigQuery
+
+Each service owns its data.
+
+---
+
+# Allowed Evolution
+
+The architecture may evolve in the future.
+
+Possible upgrades:
+
+- Kafka event backbone
+- schema registry
+- replay pipelines
+- advanced analytics
+
+However these changes must preserve:
+
+- event-driven communication
+- service independence
+- data ownership boundaries
+
+---
+
+# Final Principle
+
+Services must remain:
+
+- **small**
+- **independent**
+- **event-driven**
+
+If a service starts performing multiple responsibilities, the architecture likely requires **introducing a new service** rather than expanding an existing one.

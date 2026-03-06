@@ -1,0 +1,232 @@
+---
+description: Development plan — phased implementation aligned with High Level Architecture (architecture.mdc §5)
+globs:
+  - "smart-contract/**"
+  - "services/**"
+  - "infra/**"
+  - "grafana/**"
+  - "docs/**"
+  - ".github/workflows/**"
+alwaysApply: false
+---
+
+# Development Plan — Chain-to-Cloud Voting
+
+This document expands **Section 5: High Level Architecture** from `architecture.mdc` into a concrete, phased development plan.
+
+The three phases are **balanced in scope**: each phase delivers a coherent slice of the system and includes infrastructure, application code, observability, and quality work. No phase is a "mountain of work"; the last phase is not "almost nothing."
+
+---
+
+# Relationship to Architecture
+
+The high-level flow from `architecture.mdc` is:
+
+| Phase   | Architecture summary |
+|--------|------------------------|
+| **Phase 1** | Blockchain → Ingestion Lambda → SQS → Aggregator (Go) → DynamoDB → API Gateway |
+| **Phase 2** | SQS → Forwarder Lambda → GCP Pub/Sub → Analytics Service (Go) → BigQuery |
+| **Phase 3** | Event backbone upgrade: Kafka (or equivalent) with replay, consumer lag, stronger semantics |
+
+This plan breaks each phase into **deliverables**, **infrastructure**, **services**, **observability**, and **quality** so that effort is distributed evenly.
+
+---
+
+# Phase 1 — MVP: Operational Pipeline (AWS)
+
+**Goal:** End-to-end flow from blockchain to operational read model and a minimal read API. All on AWS.
+
+## 1.1 Scope Summary
+
+- Smart contract emits structured events.
+- Ingestion captures events and publishes to SQS.
+- Aggregator consumes SQS, maintains DynamoDB projections, exposes read API via API Gateway.
+- Basic observability and CI/CD in place.
+
+## 1.2 Deliverables
+
+### Smart contract
+
+- **Stack:** Rust, Solana Anchor (or alternative per architecture).
+- **Surface:** `create_proposal(title, options[])`, `vote(proposal_id, option_id)`, `close_proposal(proposal_id)`.
+- **Events:** `ProposalCreated`, `VoteCast`, `ProposalClosed` — data-rich, consistent with `event_schema.mdc`.
+- **Tests:** Unit / integration tests per `testing_smart_contract.mdc`.
+
+### Ingestion service
+
+- **Runtime:** AWS Lambda.
+- **Responsibilities:** Connect to blockchain RPC/WebSocket, detect contract events, normalize to canonical JSON (including `event_id`, `event_type`, `timestamp`, `source`, `version`), publish to SQS.
+- **No business logic:** Only capture and normalize; no projections, no DB.
+- **Config:** Queue URL, RPC endpoint, contract address from environment.
+
+### Event bus (AWS)
+
+- **SQS:** Main queue for voting events; DLQ configured; visibility timeout and redrive policy aligned with consumer processing time.
+- **Terraform:** Queue(s), IAM policies, outputs for queue URL.
+
+### Aggregator service
+
+- **Language:** Go; structure per `service_style.mdc` (cmd, internal/domain, service, repository, handlers).
+- **Responsibilities:** Consume messages from SQS, deserialize and validate events, apply idempotent projection updates (dedup/upsert), update DynamoDB.
+- **Projections:** Proposals table (proposal_id, total_votes, option_counts, status, updated_at), VoterActivity table (voter_pubkey, votes_cast, last_vote_timestamp).
+- **Read API:** HTTP API (e.g. GET proposal by ID, list proposals) backed by DynamoDB; exposed via API Gateway.
+- **Idempotency:** Required; use event_id or equivalent per `service_boundaries.mdc` and `coding_style.mdc`.
+
+### Infrastructure (AWS)
+
+- **Terraform:** VPC/network as needed, Lambda (ingestion), SQS, DynamoDB tables, IAM roles (least privilege), API Gateway, CloudWatch log groups.
+- **Environments:** At least `dev` and `prod` (or staging) via variables; naming per `terraform_style.mdc`.
+
+### Observability (Phase 1)
+
+- **Logging:** Structured logs (e.g. slog) with correlation fields (event_id, proposal_id, service).
+- **Metrics:** Basic CloudWatch metrics (e.g. events published, events processed, errors).
+- **DLQ:** Monitor and alert on messages in DLQ.
+
+### Quality and CI/CD
+
+- **Lint and test:** Go lint/test for aggregator; Rust lint/test for contract; run in CI.
+- **Build and deploy:** Build Lambda artifacts and aggregator binary; Terraform plan/apply for AWS (manual or automated apply for prod).
+- **Docs:** Repository structure, ADR for major choices, `docs/progress/` entry for Phase 1.
+
+## 1.3 Phase 1 Exit Criteria
+
+- A vote on chain results in an event in SQS, aggregator updates DynamoDB, and the read API returns updated proposal state.
+- Idempotent handling of duplicate events verified.
+- CI runs lint, tests, and Terraform plan successfully.
+
+---
+
+# Phase 2 — Cross-Cloud and Analytical Pipeline (GCP)
+
+**Goal:** Bridge events from AWS to GCP and build the analytical projection. Equal weight to Phase 1: new cloud, new service, new storage, and observability.
+
+## 2.1 Scope Summary
+
+- Forwarder reads from SQS and publishes to GCP Pub/Sub.
+- Analytics service consumes Pub/Sub, writes raw events to BigQuery, maintains derived analytical tables.
+- GCP infrastructure and CI/CD for forwarder and analytics; cross-cloud observability.
+
+## 2.2 Deliverables
+
+### Forwarder service
+
+- **Runtime:** AWS Lambda (triggered by SQS or polling).
+- **Responsibilities:** Read events from SQS, optional minimal transformation (e.g. envelope), publish to GCP Pub/Sub. No business logic, no DB, no analytics.
+- **Config:** SQS queue URL, GCP project/topic, credentials (e.g. workload identity or cross-account/cross-project setup).
+- **Resilience:** Retries, DLQ for failed forwards; idempotent publishing where possible (e.g. message dedup key if supported).
+
+### GCP event bus
+
+- **Pub/Sub:** Topic(s) for voting events; subscriptions for analytics service; dead-letter topic or equivalent for poison messages.
+- **Terraform:** Topic, subscription(s), IAM, service accounts per `terraform_style.mdc`.
+
+### Analytics service
+
+- **Language:** Go; Cloud Run.
+- **Responsibilities:** Consume Pub/Sub, validate event schema, write raw events to BigQuery (`votes_raw` and equivalent for proposals), maintain derived tables (e.g. `proposal_trends`: window_start, votes_per_minute, voter_growth_rate, anomaly_flag).
+- **Idempotency:** Dedup by event_id or (proposal_id, tx_signature, etc.) when writing to BigQuery.
+- **No operational state:** Does not call aggregator or touch DynamoDB; only Pub/Sub and BigQuery per `service_boundaries.mdc`.
+
+### Infrastructure (GCP)
+
+- **Terraform:** Pub/Sub, BigQuery dataset and tables, Cloud Run service, IAM, service accounts, VPC connector if needed.
+- **Environments:** dev/prod (or staging) with variables and naming convention.
+
+### Observability (Phase 2)
+
+- **GCP Monitoring:** Metrics for Pub/Sub throughput, Cloud Run latency/errors, BigQuery usage.
+- **Correlation:** Same correlation fields in logs (event_id, proposal_id) across AWS and GCP for tracing.
+- **Documentation:** How to trace an event from chain → SQS → Pub/Sub → BigQuery.
+
+### Quality and CI/CD
+
+- **Tests:** Unit and integration tests for forwarder and analytics (mocked Pub/Sub/BigQuery where appropriate); see `testing_go_services.mdc` and `testing_event_driven.mdc`.
+- **CI:** Build and deploy forwarder Lambda and analytics (Cloud Run); Terraform for GCP in same or separate workflows; no cross-cloud direct calls in tests.
+- **Event schema:** Confirm event schema is consistent for SQS and Pub/Sub (same JSON shape); document in `event_schema.mdc` if needed.
+
+## 2.3 Phase 2 Exit Criteria
+
+- An event that reaches SQS is forwarded to Pub/Sub and processed by analytics into `votes_raw` and derived tables.
+- No direct AWS–GCP service calls; only event flow via SQS → Lambda → Pub/Sub → Analytics.
+- GCP Terraform and CI run successfully; observability covers both clouds.
+
+---
+
+# Phase 3 — Event Backbone and Production Hardening
+
+**Goal:** Replace or augment the event bus with a Kafka-style backbone, add cross-cloud observability (Grafana), and harden for production. Phase 3 is **not** "just Kafka": it includes replay, schema discipline, dashboards, E2E tests, and operational readiness.
+
+## 3.1 Scope Summary
+
+- Introduce Kafka (e.g. AWS MSK or Confluent) as the primary event backbone for at least part of the pipeline (e.g. ingestion → Kafka → aggregator; optionally forwarder from Kafka to Pub/Sub for GCP).
+- Schema registry (optional but recommended) for event contracts.
+- Replay capability and consumer lag metrics.
+- Grafana dashboards, alerting, E2E tests, and operational runbooks.
+
+## 3.2 Deliverables
+
+### Kafka event backbone
+
+- **Platform:** AWS MSK or managed Kafka (or Confluent Cloud); Terraform for cluster, topics, IAM/ACLs.
+- **Topics:** Design topics for voting events (e.g. one topic per event type or single topic with partitioning by proposal_id); retention and replication suitable for replay.
+- **Migration path:** Either (a) ingestion writes to both SQS and Kafka during transition, then switch consumers to Kafka and retire SQS for event flow, or (b) ingestion writes only to Kafka and aggregator (and optionally forwarder) consume from Kafka. Document migration in ADR.
+
+### Schema registry (optional)
+
+- **Purpose:** Central contract for event schemas; compatibility checks on produce/consume.
+- **Integration:** Producers (ingestion, or forwarder if it produces to Kafka) and consumers validate or register schemas; document in `event_schema.mdc`.
+
+### Ingestion and consumers
+
+- **Ingestion:** Produce normalized events to Kafka (and optionally keep SQS path until migration complete).
+- **Aggregator:** Consume from Kafka instead of (or in addition to) SQS; same idempotent projection logic; consumer group and offset management.
+- **Forwarder (if applicable):** Consume from Kafka and publish to GCP Pub/Sub so analytics path remains unchanged; or consume from Kafka only and drop SQS for this path.
+- **Replay:** Ability to reset consumer group offset and reprocess; documented runbook.
+
+### Observability (Phase 3)
+
+- **Grafana:** Dashboards per `architecture.mdc` §11 — datasources CloudWatch, GCP Monitoring, BigQuery; panels for vote throughput, end-to-end latency, SQS/Kafka queue depth, DLQ events, error rate, active voters.
+- **Alerting:** Alerts on DLQ depth, consumer lag, error rate; routing to a channel or ticketing (e.g. Slack, PagerDuty) as per project choice.
+- **Logs and traces:** Correlation IDs end-to-end; structured logs in all services.
+
+### Quality and operational readiness
+
+- **E2E tests:** Per `testing_e2e.mdc`: (1) proposal created on chain → event ingested and reflected in operational projection; (2) vote cast → aggregator and analytics updated; (3) event forwarded to GCP and in BigQuery; (4) duplicate event does not corrupt state; (5) failures visible (logs, DLQ).
+- **Load and resilience:** Load simulation tool or script to generate votes and verify throughput and stability; optional chaos (e.g. consumer restart, replay).
+- **Runbooks:** DLQ handling, consumer lag remediation, replay procedure, rollback steps.
+- **CI/CD:** OIDC for GitHub Actions where possible; Terraform plan/apply gates; secure secrets; no static long-lived credentials in repo.
+
+## 3.3 Phase 3 Exit Criteria
+
+- Events flow through Kafka (or hybrid) with documented topology; replay is possible and tested.
+- Grafana dashboards show key metrics across AWS and GCP; at least one critical alert is configured and tested.
+- E2E tests cover the critical flows above and run in CI.
+- Migration and operational runbooks are in `docs/`.
+
+---
+
+# Phase Balance Summary
+
+| Phase | Focus | Main work packages |
+|-------|--------|---------------------|
+| **1** | Operational pipeline (AWS) | Contract, Ingestion, SQS, Aggregator, DynamoDB, API Gateway, AWS Terraform, basic observability, CI |
+| **2** | Cross-cloud and analytics | Forwarder, Pub/Sub, Analytics, BigQuery, GCP Terraform, GCP observability, event schema alignment, CI for GCP |
+| **3** | Event backbone and production | Kafka/MSK, schema registry (opt.), migration, replay, Grafana, alerting, E2E tests, load/runbooks, OIDC/security |
+
+Each phase delivers a **shippable slice**: Phase 1 = operational system on AWS; Phase 2 = multi-cloud analytics; Phase 3 = production-grade event backbone and observability. Work is spread across infra, application, observability, and quality in all three phases so that no single phase is disproportionately large or small.
+
+---
+
+# References
+
+- **Section 5 (High Level Architecture):** `architecture.mdc`
+- **Service boundaries:** `service_boundaries.mdc`
+- **Event schema:** `event_schema.mdc`
+- **Repository structure:** `architecture.mdc` §13
+- **Observability:** `architecture.mdc` §11, §15
+- **Testing:** `testing_e2e.mdc`, `testing_event_driven.mdc`, `testing_go_services.mdc`, `testing_smart_contract.mdc`
+
+---
+
+# End of Development Plan

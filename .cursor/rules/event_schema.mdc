@@ -1,0 +1,188 @@
+---
+description: Event schema conventions used across services
+globs:
+  - "services/**"
+  - "smart-contract/**"
+---
+
+# Event Schema Rules
+
+This file defines the event schema standards used across the system.
+
+All services must comply with these rules.
+
+---
+
+# 1. Event Philosophy
+
+Events are **immutable facts**.
+
+They represent something that already happened.
+
+Events must never be modified after publication.
+
+---
+
+# 2. Event Transport
+
+Events flow through:
+
+AWS SQS
+
+and later
+
+GCP Pub/Sub
+
+Events must be compatible with both.
+
+---
+
+# 3. Serialization Format
+
+Events must use:
+
+JSON
+
+Example:
+
+```json
+{
+  "event_type": "VoteCast",
+  "timestamp": 1700000000
+}
+```
+
+---
+
+# 4. Required Metadata
+
+Every event must contain:
+
+event_id
+event_type
+timestamp
+source
+version
+
+
+Example:
+
+```json
+{
+  "event_id": "uuid",
+  "event_type": "VoteCast",
+  "timestamp": 1700000000,
+  "source": "voting-contract",
+  "version": 1
+}
+```
+
+---
+
+# 5. VoteCast Event
+
+Example payload:
+
+```json
+{
+  "event_type": "VoteCast",
+  "proposal_id": "abc123",
+  "option_id": "1",
+  "voter_pubkey": "wallet123",
+  "timestamp": 1700000000,
+  "block_number": 100234,
+  "tx_signature": "txabc"
+}
+```
+
+---
+
+# 6. ProposalCreated Event
+
+Example:
+
+```json
+{
+  "event_type": "ProposalCreated",
+  "proposal_id": "abc123",
+  "title": "Upgrade protocol",
+  "options": ["Yes", "No"],
+  "timestamp": 1700000000
+}
+```
+
+---
+
+# 7. ProposalClosed Event
+
+Example:
+
+```json
+{
+  "event_type": "ProposalClosed",
+  "proposal_id": "abc123",
+  "timestamp": 1700000000
+}
+```
+
+---
+
+# 8. Versioning
+
+Events must include version.
+
+Backward compatibility must be preserved.
+
+Never remove existing fields.
+
+---
+
+# 9. Event Size
+
+Events should remain small.
+
+Recommended maximum:
+
+< 256 KB
+
+---
+
+# 10. Schema Evolution
+
+Allowed changes:
+
+- add fields
+- extend metadata
+
+Forbidden changes:
+
+- removing fields
+- changing field meaning
+
+---
+
+# 11. Event Naming
+
+Event types must use:
+
+PascalCase
+
+Examples:
+
+VoteCast
+ProposalCreated
+ProposalClosed
+
+---
+
+# 12. Consumer Expectations
+
+Consumers must:
+
+- validate event_type
+- ignore unknown fields
+- handle duplicates
+
+---
+
+# End of Event Schema Rules

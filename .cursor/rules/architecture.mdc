@@ -1,4 +1,11 @@
 ---
+description: Global architecture rules for the Chain-to-Cloud Voting multi-cloud event-driven system
+globs:
+  - "smart-contract/**"
+  - "services/**"
+  - "infra/**"
+  - "grafana/**"
+  - "docs/**"
 alwaysApply: true
 ---
 
@@ -445,19 +452,17 @@ Observability is a core requirement.
 Grafana should provide cross-cloud dashboards.
 
 Datasources:
-
-AWS CloudWatch
-GCP Monitoring
-BigQuery
+- AWS CloudWatch
+- GCP Monitoring
+- BigQuery
 
 Key metrics:
-
-vote throughput
-end-to-end latency
-SQS queue depth
-DLQ events
-error rate
-active voters
+- vote throughput
+- end-to-end latency
+- SQS queue depth
+- DLQ events
+- error rate
+- active voters
 
 ---
 
@@ -466,12 +471,9 @@ active voters
 Because SQS provides at-least-once delivery, services must be idempotent.
 
 Strategies include:
-
-event deduplication
-
-transaction id tracking
-
-upsert operations
+- event deduplication
+- transaction id tracking
+- upsert operations
 
 No service may assume exactly-once delivery.
 
@@ -504,31 +506,22 @@ repo/
 
 Possible future improvements:
 
-Kafka event backbone
-
-schema registry
-
-replay capability
-
-anomaly detection
-
-load simulation tools
+- Kafka event backbone
+- schema registry
+- replay capability
+- anomaly detection
+- load simulation tools
 
 These should not complicate the MVP.
 
 ---
 
-# 15. Design Philosophy
+# 15. Observability Expectations (code implications)
 
-The architecture intentionally balances:
-
-realism
-
-learning value
-
-achievable complexity
-
-The system should feel like a production-grade cloud architecture, even though it runs at small scale.
+- Prefer structured logs over prints.
+- Include correlation fields to trace an event end-to-end.
+- Expose basic metrics where feasible (CloudWatch / GCP Monitoring).
+- Failures must be visible: log + metrics + DLQ (where applicable).
 
 ---
 

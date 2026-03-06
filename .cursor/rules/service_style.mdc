@@ -1,0 +1,268 @@
+---
+description: Coding standards for Go microservices
+globs:
+  - "services/**/*.go"
+---
+
+# Service Development Rules — Go Microservices
+
+This file defines coding standards and architectural conventions for Go services in this repository.
+Cursor AI should follow these rules whenever generating or modifying Go services.
+
+---
+
+# 1. Language
+
+All backend services must be written in:
+
+**Go (Golang)**
+
+Minimum version:
+
+Go 1.25+
+
+---
+
+# 2. Service Architecture
+
+Services should follow **clean architecture principles**.
+
+Preferred structure:
+
+service/
+├── cmd/
+│   └── service-name/
+│       └── main.go
+├── internal/
+│   ├── app/
+│   │   ├── handlers/     # HTTP handlers
+│   │   ├── domain/       # Entities, business logic
+│   │   ├── service/      # Use cases/orchestration
+│   │   └── repository/   # Data access interfaces/impl
+│   ├── configs/          # Config loading
+│   └── ...               # db, cache atd.
+├── api/                  # OpenAPI spec (volitelné)
+├── go.mod
+└── README.md
+
+Responsibilities:
+
+cmd/
+- Application entry points (main.go initializes DI, wires dependencies and starts the server).
+
+internal/domain/
+- Core business entities, value objects and pure domain logic (no interfaces to external dependencies, independent of DB/HTTP).
+
+internal/application/ (or /service/)
+- Use cases/business orchestration: coordinates domain objects, transaction boundaries, calls repository interfaces (application services).
+
+internal/adapters/repository/ (or /infra/)
+- Concrete data access implementations (SQL/NoSQL clients), depends on domain interfaces.
+
+internal/adapters/handlers/ (or /delivery/http/)
+- HTTP/gRPC/event handlers: request validation, calls application services, transforms data to/from DTO.
+
+---
+
+# 3. Service Types
+
+This project contains two types of services.
+
+---
+
+## Event Consumer Services
+
+Examples:
+
+Aggregator  
+Analytics
+
+Responsibilities:
+- consume events
+- apply transformations
+- write projections to storage
+
+They must **never call other services synchronously**.
+
+Communication must be event-based.
+
+---
+
+## API Services
+
+Example:
+
+Aggregator Read API
+
+Responsibilities:
+- expose read endpoints
+- fetch data from DynamoDB
+- provide lightweight query endpoints
+
+---
+
+# 4. Logging
+
+All services must use **structured logging**.
+
+Preferred library:
+
+log/slog
+
+Example:
+
+```go
+logger.Info("vote processed",
+  "proposal_id", proposalID,
+  "voter", voterID,
+)
+```
+
+Logging must include:
+
+- event id
+- proposal id
+- service name
+
+---
+
+# 5. Configuration
+
+Configuration must come from:
+
+Environment variables.
+
+Example:
+
+SQS_QUEUE_URL
+DYNAMODB_TABLE
+PUBSUB_TOPIC
+
+
+Do not hardcode configuration values.
+
+Use a configuration struct:
+
+```go
+type Config struct {
+  QueueURL string
+}
+```
+
+---
+
+# 6. Context Usage
+
+All request handling must propagate context.
+
+Example:
+
+```go
+func Handle(ctx context.Context, event Event) error
+```
+
+Never ignore context cancellation.
+
+---
+
+# 7. Error Handling
+
+Rules:
+
+- never panic
+- always return errors
+- wrap errors with context
+
+Example:
+
+```go
+return fmt.Errorf("processing vote: %w", err)
+```
+
+---
+
+# 8. Idempotency
+
+Because the system uses **at-least-once delivery**, services must be idempotent.
+
+Strategies:
+
+- deduplication keys
+- upsert operations
+- transaction IDs
+
+Never assume exactly-once delivery.
+
+---
+
+# 9. Dependency Injection
+
+Prefer constructor injection.
+
+Example:
+
+```go
+func NewService(repo Repository) *Service
+```
+
+Avoid global state.
+
+---
+
+# 10. Testing
+
+All services should include:
+
+- unit tests
+- mock repositories
+
+Example:
+
+```go
+go test ./...
+```
+
+---
+
+# 11. Performance Rules
+
+Services must:
+
+- avoid unnecessary allocations
+- reuse clients (AWS, GCP)
+- avoid blocking operations
+
+---
+
+# 12. Event Handling
+
+Event consumers should:
+
+1. Deserialize event
+2. Validate schema
+3. Apply business logic
+4. Write projection
+
+Never mutate original events.
+
+Events are immutable.
+
+---
+
+# 13. Recommended Libraries
+
+**AWS:**
+aws-sdk-go-v2
+
+**GCP:**
+cloud.google.com/go/pubsub
+
+**Logging:**
+log/slog
+
+**Serialization:**
+encoding/json
+
+---
+
+# End of Service Rules

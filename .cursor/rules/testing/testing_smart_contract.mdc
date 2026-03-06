@@ -1,0 +1,71 @@
+---
+title: Smart Contract Testing
+description: Testing rules for the blockchain voting smart contract and emitted event behavior.
+globs:
+  - "smart-contract/**/*.rs"
+  - "smart-contract/**"
+  - "!**/.cursor/**"
+alwaysApply: false
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [testing, smart-contract, rust, blockchain, events]
+cursor:
+  version: 1.0.0
+  features: [test-generation, contract-safety-guidance]
+  experimental: false
+---
+
+# Smart Contract Testing
+
+This document defines testing expectations for the voting smart contract.
+
+The contract is the source of truth for emitted voting events.
+
+---
+
+## What Must Be Tested
+
+At minimum, test:
+- proposal creation
+- vote submission
+- proposal closing
+- invalid operations
+- emitted event correctness
+
+---
+
+## Required Contract Behaviors
+
+Tests should verify:
+- valid proposal can be created
+- vote updates expected on-chain state
+- closing proposal changes status correctly
+- invalid vote is rejected if rules require it
+- no illegal state transition is allowed
+- emitted event payload matches expected schema
+
+---
+
+## Event Emission Tests
+
+Every state-changing operation that should emit an event must be tested for:
+- event type
+- required fields
+- correct identifiers
+- correct timestamps/slot-related metadata if available in test environment
+
+---
+
+## Negative Scenarios
+
+Test:
+- vote on non-existent proposal
+- close already closed proposal
+- invalid option id
+- duplicate or invalid action according to contract rules
+
+---
+
+## Final Principle
+
+The contract must be tested both for state transitions and for event correctness, because downstream cloud services rely on those events.

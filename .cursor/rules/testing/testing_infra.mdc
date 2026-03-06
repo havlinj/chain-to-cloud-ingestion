@@ -1,0 +1,104 @@
+---
+title: Infrastructure Testing
+description: Validation and testing rules for Terraform and infrastructure-related changes.
+globs:
+  - "infra/**/*.tf"
+  - "infra/**/*.tfvars"
+  - "infra/**/*.hcl"
+  - "!**/.cursor/**"
+alwaysApply: false
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [testing, terraform, infrastructure, validation]
+cursor:
+  version: 1.0.0
+  features: [quality-guidance, infra-validation]
+  experimental: false
+---
+
+# Infrastructure Testing
+
+This document defines validation and testing expectations for infrastructure changes.
+
+Infrastructure must be safe, repeatable, and reviewable.
+
+---
+
+## Required Validation
+
+Any meaningful Terraform change should be validated with:
+
+```bash
+terraform fmt
+terraform validate
+```
+
+Where a plan is available, prefer also:
+
+```bash
+terraform plan
+```
+
+---
+
+## What To Verify
+
+Infrastructure changes should be checked for:
+- naming consistency
+- environment separation
+- least-privilege IAM
+- output correctness
+- variable usage instead of hardcoding
+- module input/output integrity
+
+---
+
+## IAM Checks
+
+Tests/reviews must look for:
+- over-broad wildcard permissions
+- missing service scoping
+- accidental admin privileges
+- trust relationships broader than necessary
+
+---
+
+## Environment Safety
+
+Infrastructure should be testable across environments.
+
+Verify:
+- dev and prod separation
+- no hardcoded environment names where variables should be used
+- resource names include project/environment convention
+
+---
+
+## Module Testing Guidance
+
+Reusable modules should be testable for:
+- required inputs
+- sane defaults where appropriate
+- correct outputs
+- no hidden coupling to a single environment
+
+---
+
+## Change Risk Areas
+
+Pay special attention when changes affect:
+- IAM roles/policies
+- queue subscriptions
+- DLQ wiring
+- Cloud Run permissions
+- Pub/Sub publishing rights
+- state backends
+- DynamoDB table keys/indexes
+
+---
+
+## Final Principle
+
+Infrastructure validation should prevent dangerous drift, unsafe permissions, and broken deployment assumptions.
+
+---

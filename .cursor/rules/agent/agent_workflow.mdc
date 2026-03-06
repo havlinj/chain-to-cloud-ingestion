@@ -1,0 +1,268 @@
+---
+title: Agent Development Workflow
+description: Rules that define how the AI agent should iterate when contributing to the project, requiring explicit user approval between major steps and documenting progress.
+globs:
+  - "services/**"
+  - "smart-contract/**"
+  - "infra/**"
+  - "docs/**"
+  - "!**/.cursor/**"
+alwaysApply: true
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [workflow, ai-agent, iteration, approval, documentation]
+cursor:
+  version: 1.0.0
+  features: [planning-guidance, iterative-development]
+  experimental: false
+---
+
+# Agent Development Workflow
+
+This document defines how the AI agent must behave when assisting with development of the project.
+
+The goal is to ensure that development remains:
+
+- controlled
+- transparent
+- iterative
+- well documented
+
+The agent must **not autonomously implement large features without confirmation**.
+
+Every meaningful change must follow an **approval-driven iteration loop**.
+
+---
+
+# Core Principle
+
+The agent must work in **small, explicit iterations**.
+
+Before implementing anything substantial, the agent must:
+
+1. Explain the intended change.
+2. Ask for confirmation or feedback.
+3. Wait for explicit approval.
+4. Only then proceed with implementation.
+
+The agent must **never assume approval**.
+
+---
+
+# Iterative Development Loop
+
+Every development activity should follow this pattern.
+
+## Step 1 — Understand the Task
+
+The agent must first confirm the goal.
+
+It should restate:
+
+- what is being built
+- which part of the system it affects
+- why the change is needed
+
+Example:
+
+> I plan to implement the event handler for the Aggregator service that processes `VoteCast` events and updates DynamoDB projections.
+
+---
+
+## Step 2 — Propose the Approach
+
+Before writing code, the agent must describe the approach.
+
+This should include:
+
+- affected services
+- new files or modules
+- architecture implications
+- potential risks
+
+Example questions to the user:
+
+- Does this approach align with your expectations?
+- Should the logic live in the service layer or domain layer?
+- Do you want the handler to be implemented now, or only the service skeleton?
+
+The agent must **wait for user feedback**.
+
+---
+
+## Step 3 — Await Explicit Approval
+
+The agent must pause and wait.
+
+No code generation should happen until the user confirms.
+
+Explicit signals of approval include messages such as:
+
+- "yes"
+- "go ahead"
+- "implement it"
+- "proceed"
+
+If the user expresses doubt or asks questions, the agent must clarify instead of proceeding.
+
+---
+
+## Step 4 — Implement the Change
+
+Only after approval should the agent:
+
+- generate code
+- modify existing files
+- create new modules
+- update infrastructure definitions
+
+Changes should be **minimal and focused**.
+
+Large refactors must be broken into smaller iterations.
+
+---
+
+## Step 5 — Explain What Was Done
+
+After implementation, the agent must summarize:
+
+- what files were created or modified
+- what behavior was introduced
+- how the change integrates into the system
+
+The explanation must be concise and technical.
+
+---
+
+# Progress Documentation
+
+All meaningful project progress should be documented.
+
+Documentation should be written into the repository under:
+
+docs/progress/
+
+Suggested file structure:
+
+docs/progress/
+2026-architecture-setup.md
+2026-event-pipeline.md
+2026-aggregator-implementation.md
+
+---
+
+## When To Document Progress
+
+The agent should create or update progress documentation when:
+
+- a new service is introduced
+- a major architectural component is implemented
+- infrastructure is added or significantly modified
+- an important architectural decision is made
+- a milestone is reached
+
+---
+
+## Documentation Format
+
+Progress documents should contain:
+
+### Context
+
+What problem or feature was addressed.
+
+### Implementation Summary
+
+What was implemented.
+
+### Files or Modules Added
+
+Key files introduced or modified.
+
+### Architectural Notes
+
+Any important architectural considerations.
+
+### Next Planned Steps
+
+What should be implemented next.
+
+---
+
+## Documentation Style
+
+Progress documentation should be:
+
+- concise
+- technical
+- chronological
+- easy to scan
+
+Avoid excessive narrative.
+
+Focus on engineering decisions and outcomes.
+
+---
+
+# Scope Control
+
+The agent must avoid uncontrolled scope expansion.
+
+If a task appears to require major additional work, the agent must:
+
+1. explain the dependency
+2. propose the additional step
+3. ask the user whether to proceed
+
+---
+
+# Large Feature Rule
+
+If a change affects:
+
+- multiple services
+- infrastructure
+- event schemas
+- system architecture
+
+The agent must **split the work into multiple iterations**.
+
+Each iteration must go through the approval loop.
+
+---
+
+# Architectural Respect
+
+When proposing changes, the agent must respect:
+
+- service boundaries
+- event-driven communication
+- multi-cloud architecture
+- CQRS separation
+
+If a proposed solution conflicts with these rules, the agent must highlight the issue before implementation.
+
+---
+
+# Safe Defaults
+
+When uncertain, the agent should:
+
+- ask clarifying questions
+- propose alternatives
+- avoid irreversible decisions
+
+The agent should **prefer discussion over premature implementation**.
+
+---
+
+# Final Principle
+
+The agent is a **collaborative engineering assistant**, not an autonomous developer.
+
+Development must remain:
+
+- interactive
+- iterative
+- approval-driven
+- well documented

@@ -1,0 +1,179 @@
+---
+description: Terraform infrastructure rules
+globs:
+  - "infra/**/*.tf"
+---
+
+# Terraform Infrastructure Rules
+
+This file defines standards for Terraform infrastructure in this repository.
+
+Cursor AI must follow these rules when generating infrastructure code.
+
+---
+
+# 1. Terraform Version
+
+Minimum version:
+Terraform 1.6+
+
+---
+
+# 2. Directory Structure
+
+Infrastructure must be split by cloud provider.
+
+infra/
+aws/
+gcp/
+
+
+Each directory should contain:
+
+main.tf
+variables.tf
+outputs.tf
+providers.tf
+
+---
+
+# 3. State Management
+
+Terraform state must be remote.
+
+AWS:
+
+S3 backend
+DynamoDB locking
+
+
+GCP:
+
+GCS backend
+
+---
+
+# 4. Module Structure
+
+Reusable infrastructure should use modules.
+
+Example:
+
+modules/
+lambda
+sqs
+dynamodb
+cloudrun
+
+---
+
+# 5. Environment Separation
+
+Support multiple environments:
+
+dev
+staging
+prod
+
+Variables should control environment.
+
+Example:
+
+var.environment
+
+---
+
+# 6. Naming Conventions
+
+All resources should follow:
+
+project-environment-resource
+
+Example:
+
+voting-dev-sqs
+voting-prod-dynamodb
+
+---
+
+# 7. AWS Resources
+
+Core resources:
+
+- Lambda
+- SQS
+- DynamoDB
+- IAM roles
+- CloudWatch
+
+All services must use **least privilege IAM**.
+
+---
+
+# 8. GCP Resources
+
+Core resources:
+
+- Cloud Run
+- Pub/Sub
+- BigQuery
+- Service Accounts
+
+---
+
+# 9. IAM Best Practices
+
+Never allow:
+
+":"
+
+Policies must be minimal.
+
+---
+
+# 10. Outputs
+
+Important infrastructure values should be exported.
+
+Example:
+
+output "sqs_queue_url"
+
+---
+
+# 11. Variables
+
+All configurable values must be variables.
+
+Example:
+
+variable "region"
+
+Avoid hardcoding.
+
+---
+
+# 12. Formatting
+
+Terraform code must pass:
+
+terraform fmt
+terraform validate
+
+---
+
+# 13. CI/CD Integration
+
+Terraform must support automated execution through GitHub Actions.
+
+Expected pipeline steps:
+
+1. terraform init
+2. terraform fmt
+3. terraform validate
+4. terraform plan
+5. terraform apply
+
+---
+
+# End of Terraform Rules

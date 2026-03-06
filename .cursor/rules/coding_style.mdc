@@ -1,0 +1,238 @@
+---
+title: Coding Style & Conventions
+description: Coding standards and clean code principles for the Chain-to-Cloud Voting system (Go services + Terraform + event contracts).
+globs:
+  - "services/**/*.go"
+  - "infra/**/*.tf"
+  - "smart-contract/**/*.rs"
+  - "services/**"
+  - "smart-contract/**"
+  - "infra/**"
+  - "grafana/**"
+  - "!**/.cursor/**"
+  - "!docs/**"
+alwaysApply: false
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [coding-style, conventions, go, terraform, events, clean-architecture]
+cursor:
+  version: 1.0.0
+  features: [style-enforcement, code-generation-guidance]
+  experimental: false
+---
+
+# Coding Style & Conventions
+
+This document defines coding standards for the **Chain-to-Cloud Voting** project.
+
+English must be used everywhere:
+- Code
+- Identifiers
+- Comments
+- Documentation
+
+---
+
+## Core Principles
+
+- Prefer clarity over cleverness.
+- Code must be easy to read and self-explanatory.
+- Names must clearly describe purpose and intent.
+- Avoid unnecessary abstractions.
+- Keep units small and focused.
+- Avoid hidden side effects.
+- Maintain strict separation of concerns.
+- Design for **idempotency** (at-least-once delivery).
+
+---
+
+# Go Microservices (services/**)
+
+## Clean Boundaries
+
+Services MUST respect these boundaries:
+
+- **Handlers/transport layer**: parses inputs, calls application/service layer, returns outputs.
+- **Service/application layer**: orchestrates business rules, validates, ensures idempotency.
+- **Domain layer**: domain types and invariants; no cloud SDK usage.
+- **Repository layer**: persistence, external APIs, cloud SDK calls.
+
+Rules:
+- No direct DB/SQS/PubSub calls from handlers.
+- No HTTP/transport concerns inside domain.
+- No cross-service synchronous RPC in business logic (event-driven only).
+
+---
+
+## Function Design Rules
+
+- A function MUST NOT exceed **25 lines** (excluding comments and braces).
+- Split complex logic into smaller private helpers.
+- Each function must have a single, well-defined responsibility.
+- Prefer early returns over nested blocks.
+- Avoid deep nesting.
+
+Preferred pattern:
+
+```go
+if err != nil {
+    return err
+}
+```
+
+---
+
+## Naming Conventions
+
+- Use short but meaningful names.
+- Avoid vague names: data, info, tmp, obj.
+- Use consistent domain terminology: proposal, vote, event, projection.
+- Boolean variables must sound like predicates: isClosed, hasVoted, canProcess.
+- Interface names must describe behavior: EventStore, ProjectionRepository.
+
+---
+
+## Go-Specific Guidelines
+
+- Always write idiomatic Go.
+- Always run gofmt on modified Go files before finishing a task.
+- Prefer composition over inheritance.
+- Keep interfaces small and focused.
+- Return errors explicitly; never hide them.
+- Do not panic in business logic.
+- Use context.Context for request-scoped operations.
+- Avoid global mutable state (exceptions require concurrency primitives + clear justification).
+- Reuse cloud SDK clients (AWS/GCP) — do not recreate per request/event.
+
+---
+
+## Error Handling Rules
+
+- Always check returned errors.
+- Wrap errors with meaningful context when appropriate.
+- Never silently ignore errors.
+- Error messages must describe operation intent.
+
+Example:
+
+```go
+return fmt.Errorf("update proposal projection: %w", err)
+```
+
+---
+
+## Logging Rules
+
+- Use structured logging: log/slog.
+- Every log line should include enough context to correlate:
+    - event_id
+    - event_type
+    - proposal_id (if present)
+    - service (service name)
+
+Avoid logging PII (none expected, but treat voter identifiers carefully).
+
+---
+
+## Configuration Rules
+
+- Configuration MUST come from environment variables.
+- No hardcoded endpoints, table names, topic names, queue URLs.
+- Use a Config struct populated at startup.
+- Validate required config values at startup and fail fast.
+
+---
+
+## Idempotency Rules (Critical)
+
+Because SQS/PubSub deliver **at-least-once**:
+- Event consumers MUST be idempotent.
+- Consumers MUST tolerate duplicate delivery.
+
+Allowed strategies:
+- Store and check event_id in a dedup table (preferred).
+- Use upsert operations with deterministic keys.
+- Use conditional writes (DynamoDB) based on last processed event version.
+
+Forbidden:
+- Logic that assumes “this event arrives only once”.
+
+---
+
+## Testing Rules
+
+- Provide unit tests for domain and service layers.
+- Repositories should be mockable via small interfaces.
+- Avoid mocks in production code.
+- Keep tests deterministic; avoid time-dependent flakiness.
+
+---
+
+# Terraform (infra/**)
+
+## Core Rules
+
+- Terraform code must pass:
+    - terraform fmt
+    - terraform validate
+- Use variables for all configurable values.
+- Do not hardcode:
+    - region/project IDs
+    - resource names
+    - ARNs
+    - service account emails
+    - Prefer modules for reusable patterns:
+    - lambda, sqs, dynamodb, pubsub, cloudrun, bigquery
+
+---
+
+## Environment Separation
+
+- Infrastructure MUST support environment separation:
+    - dev, staging, prod (at least dev and prod)
+- Use:
+    - var.environment
+    - naming convention: {project}-{environment}-{resource}
+
+---
+
+## IAM / Least Privilege
+
+- IAM policies must be minimal.
+- Never allow wildcard administrative permissions ("*:*").
+- Bind roles per-service with only needed actions.
+
+---
+
+# Event Contracts (system-wide)
+
+## Event Rules
+
+- Events are immutable facts.
+- Consumers must ignore unknown fields.
+-Event schema MUST be backwards compatible.
+
+Mandatory metadata (in all events):
+- event_id
+- event_type
+- timestamp
+- source
+- version
+
+Forbidden schema changes:
+- removing fields
+- changing meaning of existing fields
+
+Allowed schema changes:
+- adding optional fields
+- adding new event types
+- increasing schema version for additive changes
+
+---
+
+# Observability Expectations (code implications)
+
+- Prefer structured logs over prints.
+- Include correlation fields to trace an event end-to-end.
+- Expose basic metrics where feasible (CloudWatch / GCP Monitoring).
+- Failures must be visible: log + metrics + DLQ (where applicable).

@@ -1,0 +1,192 @@
+---
+title: Go Service Testing
+description: Testing rules for Go microservices in the Chain-to-Cloud Voting system.
+globs:
+  - "services/**/*.go"
+  - "services/**/go.mod"
+  - "!**/.cursor/**"
+alwaysApply: false
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [testing, go, microservices, unit-tests, integration-tests]
+cursor:
+  version: 1.0.0
+  features: [test-generation, code-generation-guidance]
+  experimental: false
+---
+
+# Go Service Testing
+
+This document defines testing conventions for Go services.
+
+Applicable services include:
+- ingestion
+- aggregator
+- analytics
+- forwarder
+
+---
+
+## Unit Test Rules
+
+Unit tests should focus on:
+- domain logic
+- service/application logic
+- validation
+- idempotency behavior
+
+Unit tests must:
+- avoid real AWS/GCP calls
+- avoid real databases
+- use small interfaces and fakes/mocks where needed
+
+Preferred command:
+
+```bash
+go test ./...
+```
+
+---
+
+## Integration Test Rules
+
+Integration tests may cover:
+- repository behavior
+- DynamoDB interaction through local/test container setups
+- Pub/Sub or SQS adapter behavior using local emulators/mocks
+- serialization/deserialization paths
+
+Integration tests should verify:
+- storage updates
+- event deserialization
+- cloud adapter correctness
+- retry-safe behavior
+
+---
+
+## What To Test Per Layer
+
+### Domain Layer
+
+Test:
+- invariants
+- state transitions
+- edge cases
+- invalid operations
+
+Examples:
+- cannot close an already closed proposal
+- duplicate vote event does not corrupt state
+- unknown option is rejected if domain requires validation
+
+---
+
+## Service/Application Layer
+
+Test:
+- orchestration logic
+- error propagation
+- deduplication paths
+- repository interaction semantics
+
+Examples:
+- duplicate event is ignored safely
+- repository error is returned with context
+- projection update happens exactly once logically, even under duplicate input
+
+---
+
+## Repository Layer
+
+Test:
+- correct persistence mapping
+- conditional writes
+- upsert semantics
+- error handling on dependency failure
+
+Do not over-test SDK internals.
+
+---
+
+## Handler / Consumer Layer
+
+Test:
+- event parsing
+- schema validation
+- service invocation
+- invalid message handling
+- poison message behavior where applicable
+
+---
+
+## Idempotency Test Rule
+
+Every event consumer must have explicit tests proving duplicate-safe behavior.
+
+Examples:
+- same event_id processed twice
+- same vote message retried after transient repository failure
+- repeated delivery does not double-count votes
+
+This is mandatory.
+
+---
+
+## Error Handling Tests
+
+Every service should test at least:
+- dependency failure
+- invalid input/event
+- serialization failure
+- configuration validation at startup if startup config loader exists
+
+---
+
+## Test Data Rules
+
+Use small, readable fixtures.
+
+Prefer helper constructors such as:
+
+```go
+func validVoteCastEvent() Event
+```
+
+Avoid giant inline JSON blobs unless the test specifically validates raw transport payloads.
+
+---
+
+## Mocks and Fakes
+
+Preferred order:
+
+1. in-memory fake
+2. hand-written mock
+3. mocking library only if justified
+
+Do not use mocks in production code.
+
+Mocks should verify behavior only when behavior matters.
+
+---
+
+## Coverage Guidance
+
+Do not optimize for raw coverage percentage.
+
+Prioritize coverage of:
+- business-critical logic
+- event handling logic
+- idempotency
+- failure paths
+
+---
+
+## Final Principle
+
+For Go services, the most valuable tests are:
+- unit tests for logic
+- integration tests for repositories/adapters
+- explicit duplicate-event tests
+
+---

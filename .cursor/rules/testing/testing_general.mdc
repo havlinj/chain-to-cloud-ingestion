@@ -1,0 +1,124 @@
+---
+title: Testing Principles
+description: Global testing principles and quality rules for the Chain-to-Cloud Voting system.
+globs:
+  - "services/**"
+  - "smart-contract/**"
+  - "infra/**"
+  - "!**/.cursor/**"
+  - "!docs/**"
+alwaysApply: false
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [testing, quality, reliability]
+cursor:
+  version: 1.0.0
+  features: [test-generation, quality-guidance]
+  experimental: false
+---
+
+# Testing Principles
+
+This document defines global testing principles for the project.
+
+Testing must validate:
+- correctness
+- reliability
+- idempotency
+- resilience to partial failure
+- maintainability of behavior over time
+
+English must be used in:
+- test names
+- comments
+- test data descriptions
+
+---
+
+## Core Testing Rules
+
+- Prefer deterministic tests.
+- Avoid flaky tests.
+- Keep tests readable and behavior-oriented.
+- Test outcomes, not implementation details.
+- Each test should validate one business behavior or one failure mode.
+- Small unit tests are preferred over broad opaque tests.
+- End-to-end tests should cover only critical system flows.
+
+---
+
+## Test Naming
+
+Use descriptive names.
+
+Preferred style:
+
+```go
+func TestAggregator_ApplyVoteCast_IncrementsOptionCount(t *testing.T)
+```
+Avoid vague names:
+
+```go
+func TestSomething(t *testing.T)
+```
+
+---
+
+## What Must Be Tested
+
+Every meaningful component should be tested for:
+
+- happy path
+- invalid input
+- duplicate event handling
+- partial dependency failure
+- boundary conditions
+
+For event consumers, tests must explicitly cover:
+
+- duplicate delivery
+- out-of-order delivery tolerance where applicable
+- malformed events
+- retry-safe behavior
+
+---
+
+## Forbidden Testing Patterns
+
+Do not:
+- rely on sleep-based timing unless strictly necessary
+- use network calls in unit tests
+- couple tests to real cloud accounts by default
+- assert on internal private implementation details
+- write huge multi-purpose tests with many unrelated assertions
+
+---
+
+## Preferred Testing Pyramid
+
+Order of preference:
+
+1. Unit tests
+2. Integration tests with local/mocked dependencies
+3. Contract tests
+4. End-to-end tests for critical flows only
+
+---
+
+## Reliability Rule
+
+If code is changed in a behaviorally meaningful way, tests should be updated or added in the same change.
+
+---
+
+## Final Principle
+
+Tests should make the system safer to change.
+
+Prefer:
+- clear tests
+- small tests
+- stable tests
+- behavior-focused tests
+
+---

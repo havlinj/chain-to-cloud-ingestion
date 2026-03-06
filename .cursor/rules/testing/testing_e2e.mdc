@@ -1,0 +1,64 @@
+---
+title: End-to-End Testing
+description: End-to-end testing rules for critical flows across blockchain, AWS, and GCP components.
+globs:
+  - "services/**"
+  - "smart-contract/**"
+  - "infra/**"
+  - "!**/.cursor/**"
+alwaysApply: false
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [testing, e2e, integration, multi-cloud]
+cursor:
+  version: 1.0.0
+  features: [test-generation, system-understanding]
+  experimental: false
+---
+
+# End-to-End Testing
+
+This document defines end-to-end testing expectations for critical system flows.
+
+E2E tests should be limited to the most important flows.
+
+They are expensive and should not replace unit or integration tests.
+
+---
+
+## Critical Flows
+
+Preferred E2E scenarios:
+1. proposal is created on chain and corresponding event is ingested
+2. vote is emitted, consumed, and reflected in operational projection
+3. event is forwarded cross-cloud and appears in analytical storage
+4. malformed or failing processing path results in visible failure handling
+
+---
+
+## What E2E Tests Should Assert
+
+- event reaches expected downstream component
+- operational projection is updated
+- analytical storage receives the event
+- duplicate event does not corrupt state
+- system remains observable on failure
+
+---
+
+## Scope Rule
+
+E2E tests should verify:
+- system wiring
+- critical integration assumptions
+- major regressions
+
+E2E tests should not try to exhaustively test all business rules.
+
+That belongs to lower test layers.
+
+---
+
+## Final Principle
+
+Use E2E tests to prove the pipeline works, not to replace focused testing at lower levels.

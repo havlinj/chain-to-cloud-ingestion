@@ -1,0 +1,143 @@
+---
+title: Event-Driven Testing
+description: Testing rules for event flow, duplicate delivery, retries, ordering tolerance, and DLQ-oriented behavior.
+globs:
+  - "services/**"
+  - "smart-contract/**"
+  - "!**/.cursor/**"
+alwaysApply: false
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [testing, event-driven, idempotency, retries, dlq]
+cursor:
+  version: 1.0.0
+  features: [test-generation, architecture-enforcement]
+  experimental: false
+---
+
+# Event-Driven Testing
+
+This document defines test requirements specific to the event-driven architecture.
+
+The system uses at-least-once delivery semantics.
+
+Therefore, testing must explicitly validate resilience to:
+- duplicate events
+- delayed events
+- malformed events
+- transient dependency failures
+- retry scenarios
+
+---
+
+## Mandatory Event Consumer Scenarios
+
+Every event consumer should be testable against these scenarios:
+
+1. valid event is processed successfully
+2. duplicate event is processed without duplicating side effects
+3. malformed event is rejected safely
+4. transient dependency error returns a retryable failure
+5. unrecoverable invalid payload is handled explicitly
+6. missing optional fields do not break backwards compatibility
+7. unknown extra fields are ignored safely
+
+---
+
+## Duplicate Delivery
+
+Duplicate delivery tests are mandatory.
+
+Examples:
+- same event body delivered twice
+- same `event_id` with repeated processing attempt
+- same message reprocessed after timeout or repository error
+
+Expected behavior:
+- no duplicated counts
+- no duplicated writes
+- no corrupted projections
+
+---
+
+## Retry Behavior
+
+Tests should validate retry safety.
+
+Examples:
+- repository fails once, then succeeds on retry
+- publish-to-next-hop fails transiently
+- event processing is repeated after partial failure
+
+Expected behavior:
+- state remains correct
+- operation remains idempotent
+- no hidden double-application
+
+---
+
+## Ordering Tolerance
+
+Where business logic allows, consumers should tolerate out-of-order events.
+
+Examples:
+- delayed `ProposalCreated`
+- `ProposalClosed` arriving after already processed votes in replay scenarios
+- historical reprocessing
+
+If strict ordering is required for a specific flow, that requirement must be documented and tested explicitly.
+
+Do not assume perfect ordering by default.
+
+---
+
+## Poison Message Handling
+
+Consumers should be testable for invalid/unprocessable messages.
+
+Examples:
+- invalid JSON
+- unsupported schema version
+- missing required metadata
+- impossible payload values
+
+Expected behavior:
+- fail clearly
+- avoid corrupting state
+- allow DLQ path or equivalent failure handling
+
+---
+
+## Contract Compatibility
+
+Tests should validate backwards-compatible event evolution.
+
+Examples:
+- consumer accepts event with added optional field
+- consumer ignores unknown field
+- consumer rejects unsupported required shape with clear error
+
+---
+
+## Event Fixture Rules
+
+Create reusable fixtures for:
+- valid events
+- duplicate events
+- malformed events
+- older schema versions
+- newer additive schema versions
+
+Fixtures must be minimal and readable.
+
+---
+
+## Final Principle
+
+In an event-driven system, the most important tests are not only happy-path tests.
+
+The critical tests are:
+- duplicate delivery
+- retry safety
+- malformed event handling
+- backwards compatibility
