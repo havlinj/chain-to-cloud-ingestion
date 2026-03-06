@@ -29,6 +29,7 @@ This document gives the **mental model** of the project. For detailed flows, tec
 - The event bus **fans out** so that both the Aggregator (AWS) and the Forwarder (AWS→GCP) receive every event — via SNS topic + two SQS queues (or two SQS queues from ingestion). See **architecture.mdc** §5.
 - **AWS** holds the **operational projection** (DynamoDB, Aggregator); **GCP** holds the **analytical projection** (BigQuery, Analytics). Forwarder bridges events to GCP Pub/Sub.
 - Services communicate **only via events**. No direct service-to-service HTTP/RPC. Each service owns its own data store.
+- The **user interface** (e.g. Elixir/Phoenix LiveView in `user_interface/`) is a **client** of the Go services: it consumes their **gRPC read/query APIs** (Aggregator, optionally Analytics) and does not participate in the event bus.
 - Delivery is **at-least-once**; all event consumers must be **idempotent**.
 
 ---

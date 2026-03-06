@@ -84,12 +84,12 @@ Communication must be event-based.
 
 Example:
 
-Aggregator Read API
+Aggregator Read API (gRPC)
 
 Responsibilities:
-- expose read endpoints
+- expose **gRPC** read/query and streaming endpoints (ListProposals, GetProposal, WatchProposals, StreamProposalVotes, GetVoterActivity)
 - fetch data from DynamoDB
-- provide lightweight query endpoints
+- provide a stable API contract for the user interface (see `user_interface/` and `.cursor/rules/user_interface/elixir_ui.mdc`)
 
 ---
 

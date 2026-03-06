@@ -155,7 +155,9 @@ Ingestion Lambda (AWS)
 ▼
 SNS Topic (voting-events)
 │
-├────────► SQS (aggregator) ──────► Aggregator Service (Go) ──► DynamoDB ──► API Gateway
+├────────► SQS (aggregator) ──────► Aggregator Service (Go) ──► DynamoDB ──► gRPC API ──► User interface (e.g. Elixir/Phoenix LiveView)
+│                                                                              ▲
+│                                         (API Gateway / gRPC-Web proxy as needed)
 │
 └────────► SQS (forwarder)  ──────► Forwarder Lambda ──────────► (Phase 2: GCP Pub/Sub)
 
@@ -223,7 +225,7 @@ Components:
 - Lambda
 - SQS
 - DynamoDB
-- API Gateway
+- API Gateway (gRPC backend or gRPC-Web proxy for user interface)
 - CloudWatch
 - IAM
 
@@ -312,8 +314,9 @@ Responsibilities:
 - consume events from SQS
 - maintain operational projections
 - update DynamoDB
+- expose **gRPC read API** (e.g. ListProposals, GetProposal, WatchProposals, StreamProposalVotes, GetVoterActivity) for the user interface; exposed via API Gateway (gRPC) or gRPC-Web proxy
 
-This service maintains **real-time state**.
+This service maintains **real-time state**. The gRPC API is the contract for the Governance & Voting UI (see **user_interface/** and `.cursor/rules/user_interface/elixir_ui.mdc`).
 
 ---
 
@@ -347,6 +350,7 @@ Responsibilities:
 - consume Pub/Sub events
 - write raw data to BigQuery
 - generate analytical tables
+- optionally expose **gRPC query API** (e.g. GetProposalTrend, StreamProposalTrend) for the user interface to show analytics and trends
 
 ---
 
@@ -507,6 +511,7 @@ repo/
     aggregator/
     analytics/
     forwarder/
+  user_interface/          # Elixir/Phoenix LiveView app consuming gRPC from Aggregator and Analytics
   infra/
     aws/
     gcp/

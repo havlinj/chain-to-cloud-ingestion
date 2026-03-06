@@ -154,7 +154,7 @@ Allowed responsibilities:
 - update DynamoDB projections
 - maintain vote counts
 - maintain proposal state
-- expose read APIs
+- expose **gRPC read API** (ListProposals, GetProposal, streaming, voter activity) for the user interface; no synchronous RPC to other backend services
 
 Forbidden responsibilities:
 
@@ -218,6 +218,7 @@ Allowed responsibilities:
 - consume Pub/Sub events
 - store raw events in BigQuery
 - compute derived analytical tables
+- optionally expose **gRPC query API** (e.g. proposal trends) for the user interface; no synchronous RPC to other backend services
 
 Examples:
 
