@@ -84,15 +84,18 @@ Example:
 
 Use **slot** (Solana slot number) for chain position; do not use block_number.
 
-Example payload (with required metadata in envelope):
+Example (full envelope + payload):
 
 ```json
 {
+  "event_id": "550e8400-e29b-41d4-a716-446655440000",
   "event_type": "VoteCast",
+  "timestamp": 1700000000,
+  "source": "voting-contract",
+  "version": 1,
   "proposal_id": "abc123",
   "option_id": "1",
   "voter_pubkey": "wallet123",
-  "timestamp": 1700000000,
   "slot": 100234,
   "tx_signature": "txabc"
 }
@@ -102,15 +105,18 @@ Example payload (with required metadata in envelope):
 
 # 6. ProposalCreated Event
 
-Example:
+Example (full envelope + payload):
 
 ```json
 {
+  "event_id": "550e8400-e29b-41d4-a716-446655440001",
   "event_type": "ProposalCreated",
+  "timestamp": 1700000000,
+  "source": "voting-contract",
+  "version": 1,
   "proposal_id": "abc123",
   "title": "Upgrade protocol",
-  "options": ["Yes", "No"],
-  "timestamp": 1700000000
+  "options": ["Yes", "No"]
 }
 ```
 
@@ -118,13 +124,16 @@ Example:
 
 # 7. ProposalClosed Event
 
-Example:
+Example (full envelope + payload):
 
 ```json
 {
+  "event_id": "550e8400-e29b-41d4-a716-446655440002",
   "event_type": "ProposalClosed",
-  "proposal_id": "abc123",
-  "timestamp": 1700000000
+  "timestamp": 1700000000,
+  "source": "voting-contract",
+  "version": 1,
+  "proposal_id": "abc123"
 }
 ```
 
@@ -144,9 +153,7 @@ Never remove existing fields.
 
 Events should remain small.
 
-Recommended maximum:
-
-< 256 KB
+Recommended maximum for the **event JSON body** (excluding transport envelope, e.g. SQS/Pub/Sub message attributes): **less than 256 KB**.
 
 ---
 
@@ -185,6 +192,14 @@ Consumers must:
 - validate event_type
 - ignore unknown fields
 - handle duplicates
+
+---
+
+# References
+
+- **architecture.mdc** — §9 Event Schema (canonical envelope), §5 event bus.
+- **service_boundaries.mdc** — Event-driven communication; ingestion and forwarder do not add business logic to events.
+- **coding_style.mdc** — Event contracts summary and reference to this file.
 
 ---
 

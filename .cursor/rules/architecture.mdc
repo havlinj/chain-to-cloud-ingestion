@@ -291,7 +291,7 @@ Responsibilities:
 - connect to blockchain RPC/WebSocket
 - detect contract events
 - normalize events
-- publish messages to SQS
+- publish each normalized event to the event bus (SNS topic with two SQS subscriptions, or directly to two SQS queues)
 
 It must not perform business logic.
 
@@ -479,6 +479,8 @@ Key metrics:
 - error rate
 - active voters
 
+Code implications: prefer structured logs, include correlation fields (event_id, proposal_id, service) to trace events end-to-end, expose basic metrics where feasible (CloudWatch / GCP Monitoring), and ensure failures are visible (log + metrics + DLQ where applicable).
+
 ---
 
 # 12. Idempotency Requirements
@@ -533,10 +535,7 @@ These should not complicate the MVP.
 
 # 15. Observability Expectations (code implications)
 
-- Prefer structured logs over prints.
-- Include correlation fields to trace an event end-to-end.
-- Expose basic metrics where feasible (CloudWatch / GCP Monitoring).
-- Failures must be visible: log + metrics + DLQ (where applicable).
+See **§11 Observability** above for datasources, key metrics, and code implications (structured logs, correlation fields, metrics, failure visibility).
 
 ---
 

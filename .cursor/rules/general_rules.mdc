@@ -40,6 +40,17 @@ User-facing strings (e.g. API error messages, log messages intended for operator
 
 Further repo-wide conventions may be added here over time (e.g. branch naming, file naming, or documentation location). Keep this file short and high-level; refer to other rules for details.
 
+**Specialized rules** (details live there, not here):
+
+- **Architecture and event bus:** `architecture.mdc`, `service_boundaries.mdc`, `system_context.mdc`
+- **Event schema:** `event_schema.mdc`
+- **Per-service style (Go):** `service_style.mdc`, `coding_style.mdc`
+- **Terraform:** `terraform_style.mdc`
+- **Testing:** `testing/testing_general.mdc`, `testing/testing_go_services.mdc`, `testing/testing_e2e.mdc`, `testing/testing_event_driven.mdc`, `testing/testing_smart_contract.mdc`, `testing/testing_infra.mdc`
+- **ADRs:** `adr_process.mdc`
+- **Security and secrets:** `security_and_secrets.mdc`
+- **Agent workflow:** `agent/agent_workflow.mdc`
+
 ---
 
 ## References

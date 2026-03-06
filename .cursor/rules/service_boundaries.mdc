@@ -116,7 +116,7 @@ Allowed responsibilities:
 - connect to blockchain RPC/WebSocket
 - filter relevant contract events
 - normalize event format
-- publish events to SQS
+- publish events to the event bus (SNS topic with two SQS subscriptions, or directly to two SQS queues)
 
 Forbidden responsibilities:
 

@@ -48,6 +48,8 @@ English must be used everywhere (see `general_rules.mdc` for the full scope):
 
 # Go Microservices (services/**)
 
+For directory structure and layout (cmd, internal/app, domain, service, repository, handlers), see **service_style.mdc**.
+
 ## Clean Boundaries
 
 Services MUST respect these boundaries:
@@ -170,72 +172,23 @@ Forbidden:
 
 # Terraform (infra/**)
 
-## Core Rules
+For full Terraform standards (directory structure, state, modules, naming, IAM), see **terraform_style.mdc**.
 
-- Terraform code must pass:
-    - terraform fmt
-    - terraform validate
-- Use variables for all configurable values.
-- Do not hardcode:
-    - region/project IDs
-    - resource names
-    - ARNs
-    - service account emails
-    - Prefer modules for reusable patterns:
-    - lambda, sqs, dynamodb, pubsub, cloudrun, bigquery
-
----
-
-## Environment Separation
-
-- Infrastructure MUST support environment separation:
-    - dev, staging, prod (at least dev and prod)
-- Use:
-    - var.environment
-    - naming convention: {project}-{environment}-{resource}
-
----
-
-## IAM / Least Privilege
-
-- IAM policies must be minimal.
-- Never allow wildcard administrative permissions ("*:*").
-- Bind roles per-service with only needed actions.
+Summary: pass `terraform fmt` and `terraform validate`; use variables for all configurable values; support environment separation (dev, staging, prod); least-privilege IAM; prefer modules for reusable patterns.
 
 ---
 
 # Event Contracts (system-wide)
 
-## Event Rules
+For full event schema (required metadata, evolution, examples), see **event_schema.mdc**.
 
-- Events are immutable facts.
-- Consumers must ignore unknown fields.
-- Event schema MUST be backwards compatible.
-
-Mandatory metadata (in all events):
-- event_id
-- event_type
-- timestamp
-- source
-- version
-
-Forbidden schema changes:
-- removing fields
-- changing meaning of existing fields
-
-Allowed schema changes:
-- adding optional fields
-- adding new event types
-- increasing schema version for additive changes
+Summary: events are immutable; consumers must ignore unknown fields; schema must be backwards compatible. Mandatory envelope: event_id, event_type, timestamp, source, version.
 
 ---
 
 # Observability Expectations (code implications)
 
-- Prefer structured logs over prints.
-- Include correlation fields to trace an event end-to-end.
-- Expose basic metrics where feasible (CloudWatch / GCP Monitoring).
-- Failures must be visible: log + metrics + DLQ (where applicable).
+See **architecture.mdc** §11 (Observability) for key metrics and datasources. In code: prefer structured logs, include correlation fields (event_id, proposal_id, service), expose basic metrics where feasible, ensure failures are visible (log + metrics + DLQ where applicable).
 
 ---
 

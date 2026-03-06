@@ -28,7 +28,7 @@ Go 1.21+
 
 Services should follow **clean architecture principles**.
 
-Preferred structure:
+Preferred structure (use this layout for consistency):
 
 service/
 ├── cmd/
@@ -36,32 +36,23 @@ service/
 │       └── main.go
 ├── internal/
 │   ├── app/
-│   │   ├── handlers/     # HTTP handlers
-│   │   ├── domain/       # Entities, business logic
-│   │   ├── service/      # Use cases/orchestration
-│   │   └── repository/   # Data access interfaces/impl
+│   │   ├── handlers/     # HTTP/event handlers: request validation, call application layer, transform DTO
+│   │   ├── domain/       # Entities, value objects, pure domain logic (no DB/HTTP/external deps)
+│   │   ├── service/      # Use cases/orchestration: coordinates domain, transaction boundaries, calls repository
+│   │   └── repository/   # Data access interfaces and implementations (DB, cloud SDKs)
 │   ├── configs/          # Config loading
-│   └── ...               # db, cache atd.
-├── api/                  # OpenAPI spec (volitelné)
+│   └── ...               # db, cache, etc.
+├── api/                  # OpenAPI spec (optional)
 ├── go.mod
 └── README.md
 
 Responsibilities:
 
-cmd/
-- Application entry points (main.go initializes DI, wires dependencies and starts the server).
-
-internal/domain/
-- Core business entities, value objects and pure domain logic (no interfaces to external dependencies, independent of DB/HTTP).
-
-internal/application/ (or /service/)
-- Use cases/business orchestration: coordinates domain objects, transaction boundaries, calls repository interfaces (application services).
-
-internal/adapters/repository/ (or /infra/)
-- Concrete data access implementations (SQL/NoSQL clients), depends on domain interfaces.
-
-internal/adapters/handlers/ (or /delivery/http/)
-- HTTP/gRPC/event handlers: request validation, calls application services, transforms data to/from DTO.
+- **cmd/** — Application entry points (main.go initializes DI, wires dependencies, starts the server).
+- **internal/app/domain/** — Core business entities, value objects, pure domain logic; independent of DB/HTTP.
+- **internal/app/service/** — Use cases and orchestration: coordinates domain objects, transaction boundaries, calls repository interfaces.
+- **internal/app/repository/** — Concrete data access (SQL/NoSQL, AWS/GCP SDKs); implements domain-defined interfaces.
+- **internal/app/handlers/** — HTTP/gRPC/event handlers: parse input, call application service, return/respond.
 
 ---
 
@@ -263,6 +254,14 @@ log/slog
 
 **Serialization:**
 encoding/json
+
+---
+
+# References
+
+- **architecture.mdc** — Service overview, technology stack, CQRS and event bus.
+- **service_boundaries.mdc** — Allowed and forbidden responsibilities per service (Ingestion, Aggregator, Forwarder, Analytics).
+- **coding_style.mdc** — Go layer boundaries, function design, naming, idempotency; references this file for structure.
 
 ---
 
