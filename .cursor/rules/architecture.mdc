@@ -512,6 +512,7 @@ repo/
     analytics/
     forwarder/
   user_interface/          # Elixir/Phoenix LiveView app consuming gRPC from Aggregator and Analytics
+  tools/                   # Phase 4: voting UI (primitive), simulation orchestrator (load / event injection)
   infra/
     aws/
     gcp/
@@ -532,7 +533,7 @@ Possible future improvements:
 - schema registry
 - replay capability
 - anomaly detection
-- load simulation tools
+- **Phase 4 (see development_plan.mdc):** primitive voting UI (create proposal, vote on chain) + configurable simulation orchestrator (many simulated voters or event injection) so the system can be run as a “playground” and observed end-to-end (Aggregator, Analytics, UI, Grafana)
 
 These should not complicate the MVP.
 

@@ -51,6 +51,7 @@ Further repo-wide conventions may be added here over time (e.g. branch naming, f
 - **Security and secrets:** `security_and_secrets.mdc`
 - **Agent workflow:** `agent/agent_workflow.mdc`
 - **User interface (Elixir/Phoenix/LiveView):** `user_interface/elixir_ui.mdc`
+- **User interface (primitive voting UI, Phase 4):** `user_interface/voting_ui.mdc`
 
 ---
 

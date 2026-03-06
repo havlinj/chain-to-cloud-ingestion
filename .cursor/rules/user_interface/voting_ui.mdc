@@ -1,0 +1,79 @@
+---
+title: Primitive Voting UI Rules
+description: Rules for the minimal voting UI (Phase 4) that creates proposals and casts votes on the blockchain so you can play with the system and observe the full pipeline.
+globs:
+  - "tools/voting-ui/**"
+  - "user_interface/voting-ui/**"
+alwaysApply: false
+---
+
+# Primitive Voting UI Rules
+
+This file defines the **primitive voting UI** (Phase 4): a small, deliberately simple app that connects to the blockchain (e.g. Solana devnet), creates proposals, and casts votes. It is **not** the read-only Governance dashboard (that is the Elixir/Phoenix LiveView UI). Its only job is to trigger **real on-chain transactions** so that ingestion can pick up events and the rest of the pipeline (Aggregator, Analytics, read UI, Grafana) shows live activity. See **development_plan.mdc** Phase 4.
+
+---
+
+# 1. Role and Architecture
+
+- **Role:** Manual “play” — you run the voting UI to create a proposal and cast votes; those transactions hit the chain; ingestion (already running) reads chain events and publishes to the event bus; Aggregator and Analytics update; you see the result in the read UI and in Grafana.
+- **Architecture:** The voting UI is a **client of the blockchain only**. It does **not** call the ingestion service, the Aggregator, the event bus, or any backend API. The only write path is: **Voting UI → Blockchain (RPC)**. The pipeline (ingestion → SNS/SQS → Aggregator, etc.) reads from the chain independently. So the voting UI stays minimal and has no dependency on the rest of the stack except the chain (and config: RPC URL, program ID).
+- **Flow:** User runs voting UI → UI sends `create_proposal` / `vote` / `close_proposal` txs to chain → chain emits events → ingestion captures them → event bus → Aggregator, Forwarder → Analytics. You observe in read UI and Grafana.
+
+---
+
+# 2. Scope
+
+- **Must support:** Create a proposal (title, options), cast a vote (proposal_id, option_id), optionally close a proposal. Contract interface per **architecture.mdc** §8 (Smart Contract Design).
+- **Must not:** Business logic beyond calling the contract; reading from Aggregator/Analytics (use the read UI for that); publishing to the event bus; any backend service calls.
+- **Config:** RPC endpoint (e.g. Solana devnet URL), program ID, keypair (path or env). No hardcoded keys or URLs; fail fast if required config is missing.
+
+---
+
+# 3. Technology Choice
+
+- **Principle:** As simple as possible. No framework required; a small script or a minimal web form is enough.
+- **Suggested options:**
+  - **Node.js / TypeScript:** Single script or small CLI (e.g. `node voting-ui/cli.js create-proposal "Title" "Yes,No"`). Use `@solana/web3.js` (and Anchor TS client if the contract uses Anchor). One entrypoint or a few subcommands (create, vote, close).
+  - **Python:** Single script or CLI with `solana-py` and contract SDK if available. Same idea: minimal dependencies, env-based config, subcommands or flags.
+- **Alternative:** A minimal static HTML page + JS that uses a wallet adapter (e.g. Phantom) to sign and send txs; useful if you want “click in browser” instead of CLI. Still no backend; just chain RPC + wallet.
+- **Language and naming:** English everywhere (see **general_rules.mdc**): identifiers, comments, user-facing messages, README.
+
+---
+
+# 4. Location and Structure
+
+- **Location:** Under `tools/voting-ui/` or `user_interface/voting-ui/` at repo root. Keep it separate from the read-only Governance UI (Elixir app in `user_interface/`).
+- **Structure:** Flat is fine. For example:
+  - `tools/voting-ui/` (or `user_interface/voting-ui/`)
+    - `README.md` — how to install deps, set env, run (devnet, fund key, create proposal, vote)
+    - `package.json` or `requirements.txt` (or equivalent)
+    - Entrypoint: `cli.js`, `main.py`, or `index.html` + `app.js`
+    - Config from env: `RPC_URL`, `PROGRAM_ID`, `KEYPAIR_PATH` (or `PRIVATE_KEY`), etc.
+- **No** separate backend service; no database; no call to ingestion or event bus.
+
+---
+
+# 5. Documentation
+
+- **README:** How to run the voting UI: install, set RPC URL and keypair, run create-proposal and vote; point to devnet/docs if needed. Short note that ingestion must be running and reading from the same chain so that events appear in the pipeline and in the read UI.
+- **Playground:** The full “play” story (voting UI + orchestrator + what to watch) is in **development_plan.mdc** Phase 4 and in the playground runbook in `docs/`.
+
+---
+
+# 6. Observability and Errors
+
+- Log to stdout (or stderr) in a simple way: “Sending create_proposal…”, “Tx confirmed: …”, “Error: …”. No need for structured logging unless the project adopts it for tools.
+- On missing config or RPC failure, print a clear message and exit with non-zero. No silent failures.
+
+---
+
+# References
+
+- **development_plan.mdc** — Phase 4 (Voting Playground & Simulation Orchestrator); primitive voting UI deliverable.
+- **architecture.mdc** — §8 Smart Contract Design (create_proposal, vote, close_proposal); chain as event source.
+- **general_rules.mdc** — English everywhere.
+- **user_interface/elixir_ui.mdc** — Read-only Governance UI (consumes gRPC); distinct from this voting UI.
+
+---
+
+# End of Primitive Voting UI Rules

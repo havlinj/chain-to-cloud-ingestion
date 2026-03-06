@@ -5,6 +5,7 @@ globs:
   - "smart-contract/**"
   - "services/**"
   - "user_interface/**"
+  - "tools/**"
   - "infra/**"
   - "grafana/**"
   - "docs/**"
@@ -29,6 +30,7 @@ The high-level flow from `architecture.mdc` is:
 | **Phase 1** | Blockchain → Ingestion Lambda → SQS → Aggregator (Go) → DynamoDB → **gRPC API** (for UI) |
 | **Phase 2** | SQS → Forwarder Lambda → GCP Pub/Sub → Analytics (Go) → BigQuery; **UI first slice** (Elixir/Phoenix LiveView) |
 | **Phase 3** | Event backbone: Kafka (opt.); **UI full slice** (streaming, trends); Grafana, E2E, runbooks |
+| **Phase 4** | **Voting playground:** primitive voting UI (on-chain) + **simulation orchestrator** (many simulated voters / event injection) to observe full pipeline |
 
 This plan breaks each phase into **deliverables**, **infrastructure**, **services**, **observability**, and **quality** so that effort is distributed evenly.
 
@@ -229,6 +231,49 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 
 ---
 
+# Phase 4 — Voting Playground & Simulation Orchestrator
+
+**Goal:** Make the system **fun to use and observe**. Deliver a minimal **voting UI** so you can trigger real votes on the blockchain, and a **configurable orchestrator** that simulates many voters (or injects synthetic events) so you can watch the full pipeline light up with activity — Aggregator, Analytics, dashboards, Grafana — without manually casting one vote at a time.
+
+## 4.1 Scope Summary
+
+- **Primitive voting UI:** A small, deliberately simple app (web or CLI) that connects to the blockchain (devnet/testnet), creates proposals, and casts votes. You use it to “play”: submit a vote, see it flow through ingestion → Aggregator → read UI and Grafana.
+- **Simulation orchestrator:** A configurable tool that generates **many** voting-like actions, as if from many different users, so you can observe throughput, latency, and behaviour across the system. Two modes (or two tools):
+  - **Chain mode:** Drives many simulated voters that send real transactions to the chain (devnet); requires funded test keys and configurable rate, proposal IDs, option distribution.
+  - **Injection mode:** Publishes synthetic events (ProposalCreated, VoteCast) into the event bus (e.g. SNS or a test endpoint), so you can stress the pipeline and watch Aggregator/Analytics/UI without running a chain. Configurable: event rate, number of “voters”, proposal mix, duration.
+- Outcome: after Phase 4 you can run the orchestrator, open the read UI and Grafana, and watch live activity end-to-end.
+
+## 4.2 Deliverables
+
+### Primitive voting UI
+
+- **Purpose:** Manual “play” — create a proposal, cast votes, see them appear in the pipeline and in the Governance UI (Elixir LiveView).
+- **Form:** Minimal web form or CLI; connects to chain (e.g. Solana devnet), wallet/key from env or config; calls contract `create_proposal`, `vote`, optionally `close_proposal`. Rules and architecture: **`.cursor/rules/user_interface/voting_ui.mdc`**.
+- **Location:** `tools/voting-ui/` or `user_interface/voting-ui/`; kept small and out of the main read-only UI.
+- **Docs:** How to run devnet, fund keys, start the voting UI, and cast a few votes to verify the flow.
+
+### Simulation orchestrator
+
+- **Purpose:** Generate configurable load and activity so you can observe the system under realistic usage.
+- **Config:** Number of simulated voters, votes per second (or per minute), proposal ID(s) to vote on, option distribution (e.g. 60% Yes / 40% No), duration; for chain mode: keypool or key derivation.
+- **Chain mode:** Spawns N “virtual voters” (e.g. headless clients or scripts) that submit real txs to devnet; each voter has a keypair; rate-limiting and backoff to avoid overwhelming the chain. Best for end-to-end realism.
+- **Injection mode (optional):** If implemented, publishes canonical JSON events (same shape as ingestion output) to the event bus (e.g. SNS topic or a dedicated “simulation” input). No chain needed; ideal for pipeline and UI load testing and for demos. Must be clearly marked as simulation (e.g. `source: "simulation"`) so it can be filtered if needed.
+- **Location:** e.g. `tools/orchestrator/` or `tools/load-simulation/`; README with config examples and how to run chain mode (and injection mode if implemented).
+- **Observability:** While the orchestrator runs, you watch: Aggregator gRPC / read UI (live counts), Analytics (BigQuery / trends), Grafana (throughput, latency, queue depth). Optional: orchestrator emits simple metrics (events sent, errors).
+
+### Docs and runbook
+
+- **Playground runbook:** “How to run the full stack for fun”: start chain (or use devnet), ingestion, aggregator, UI, Grafana; run the voting UI to create a proposal and vote; run the orchestrator (chain mode; injection mode if implemented); what to look at in the UI and in Grafana.
+- **ADR (optional):** If the simulation injection path is added (e.g. a dedicated SNS input or test endpoint), document it so it is not confused with production ingestion.
+
+## 4.3 Phase 4 Exit Criteria
+
+- You can create a proposal and cast votes manually via the primitive voting UI and see them in the read UI and in the pipeline.
+- The orchestrator runs with a config file (or CLI flags); chain mode works against devnet with a set of funded test keys and configurable rate. Optional: injection mode generates a sustained stream of events for pipeline load testing.
+- Playground runbook (or equivalent) is in `docs/` so anyone can run “full system + simulation” and watch the activity.
+
+---
+
 # Phase Balance Summary
 
 | Phase | Focus | Main work packages |
@@ -236,8 +281,9 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 | **1** | Operational pipeline (AWS) | Contract, Ingestion, SQS, Aggregator, DynamoDB, **gRPC API**, AWS Terraform, basic observability, CI |
 | **2** | Cross-cloud, analytics, **UI first slice** | Forwarder, Pub/Sub, Analytics, BigQuery, GCP Terraform, **user_interface/** (Elixir/Phoenix LiveView, Aggregator gRPC client, list + detail), CI for GCP and UI |
 | **3** | Event backbone, **UI full slice**, production | Kafka/MSK (opt.), schema registry (opt.), **UI streaming + Analytics gRPC + voter activity**, Grafana, alerting, E2E tests, load/runbooks, OIDC/security |
+| **4** | **Playground & simulation** | Primitive **voting UI** (create proposal, vote on chain); **configurable orchestrator** (chain mode; injection mode optional); playground runbook; observe full pipeline and dashboards |
 
-Each phase delivers a **shippable slice**: Phase 1 = operational system on AWS; Phase 2 = multi-cloud analytics; Phase 3 = production-grade event backbone and observability. Work is spread across infra, application, observability, and quality in all three phases so that no single phase is disproportionately large or small.
+Each phase delivers a **shippable slice**. Phase 4 delivers a **playable** system: you can trigger real or simulated votes and watch activity everywhere (read UI, Grafana, BigQuery, queues) without hand-crafting events.
 
 ---
 
@@ -249,7 +295,7 @@ Each phase delivers a **shippable slice**: Phase 1 = operational system on AWS; 
 - **Repository structure:** `architecture.mdc` §13
 - **Observability:** `architecture.mdc` §11, §15
 - **Testing:** `testing_e2e.mdc`, `testing_event_driven.mdc`, `testing_go_services.mdc`, `testing_smart_contract.mdc`
-- **User interface:** `user_interface/elixir_ui.mdc`
+- **User interface:** `user_interface/elixir_ui.mdc`, `user_interface/voting_ui.mdc` (primitive voting UI, Phase 4)
 
 ---
 
