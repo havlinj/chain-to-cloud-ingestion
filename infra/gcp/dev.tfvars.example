@@ -1,0 +1,7 @@
+# Example variable values for dev. Copy to dev.tfvars and set your project_id.
+# Do not commit dev.tfvars if it contains project-specific values.
+
+project_id   = "your-gcp-project-id"
+environment  = "dev"
+region       = "europe-west1"
+project_name = "voting"

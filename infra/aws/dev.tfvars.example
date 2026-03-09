@@ -1,0 +1,6 @@
+# Example variable values for dev. Copy to dev.tfvars and adjust.
+# Do not commit dev.tfvars if it contains account-specific values.
+
+environment  = "dev"
+region       = "eu-west-1"
+project_name = "voting"
