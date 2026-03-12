@@ -38,3 +38,56 @@ variable "sqs_dlq_max_receive_count" {
   type        = number
   default     = 3
 }
+
+variable "dynamodb_billing_mode" {
+  description = "DynamoDB billing mode: PAY_PER_REQUEST or PROVISIONED."
+  type        = string
+  default     = "PAY_PER_REQUEST"
+
+  validation {
+    condition     = contains(["PAY_PER_REQUEST", "PROVISIONED"], var.dynamodb_billing_mode)
+    error_message = "dynamodb_billing_mode must be PAY_PER_REQUEST or PROVISIONED."
+  }
+}
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention in days for Lambda log groups."
+  type        = number
+  default     = 14
+}
+
+# Lambda deployment packages. Leave empty to skip creating the Lambda resources (e.g. until first build).
+variable "ingestion_lambda_zip_path" {
+  description = "Path to the Ingestion Lambda deployment zip (Go binary). Empty string = do not create the Lambda."
+  type        = string
+  default     = ""
+}
+
+variable "aggregator_lambda_zip_path" {
+  description = "Path to the Aggregator Lambda deployment zip (Go binary). Empty string = do not create the Lambda."
+  type        = string
+  default     = ""
+}
+
+variable "lambda_memory_mb" {
+  description = "Memory size in MB for Ingestion and Aggregator Lambdas."
+  type        = number
+  default     = 256
+}
+
+variable "lambda_timeout_seconds" {
+  description = "Timeout in seconds for Ingestion and Aggregator Lambdas."
+  type        = number
+  default     = 60
+}
+
+variable "lambda_sqs_batch_size" {
+  description = "SQS batch size for Aggregator Lambda event source mapping (1–10)."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.lambda_sqs_batch_size >= 1 && var.lambda_sqs_batch_size <= 10
+    error_message = "lambda_sqs_batch_size must be between 1 and 10."
+  }
+}
