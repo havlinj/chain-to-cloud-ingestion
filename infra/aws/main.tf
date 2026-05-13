@@ -303,15 +303,20 @@ resource "aws_lambda_function" "ingestion" {
 
   function_name = "${local.name_prefix}-ingestion"
   role          = aws_iam_role.ingestion_lambda.arn
-  handler       = "bootstrap"
-  runtime       = "go1.x"
+  handler       = "handler.handler"
+  runtime       = "nodejs20.x"
   filename      = var.ingestion_lambda_zip_path
   memory_size   = var.lambda_memory_mb
   timeout       = var.lambda_timeout_seconds
 
   environment {
     variables = {
-      SNS_TOPIC_ARN = aws_sns_topic.voting_events.arn
+      SNS_TOPIC_ARN            = aws_sns_topic.voting_events.arn
+      SOLANA_RPC_URL           = var.solana_rpc_url
+      SOLANA_PROGRAM_ID        = var.solana_program_id
+      INGESTION_LOOKBACK_SLOTS = tostring(var.ingestion_lookback_slots)
+      EVENT_SOURCE             = var.ingestion_event_source
+      EVENT_VERSION            = tostring(var.ingestion_event_version)
     }
   }
 }

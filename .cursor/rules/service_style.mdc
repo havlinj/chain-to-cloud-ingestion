@@ -7,7 +7,10 @@ globs:
 
 # Service Development Rules — Go Microservices
 
-This file defines coding standards and architectural conventions for Go services in this repository.
+This file defines coding standards and architectural conventions for **Go** backend services in this repository (Aggregator, Analytics).
+
+Ingestion is implemented in **TypeScript**; see `coding_style.mdc` (TypeScript section) and `testing_typescript_services.mdc`.
+
 Cursor AI should follow these rules whenever generating or modifying Go services.
 
 ---

@@ -19,7 +19,7 @@ cursor:
 
 This document defines testing conventions for Go services.
 
-**Applicable services:** Aggregator and Analytics are implemented in Go; this rule applies to them. Ingestion and Forwarder are AWS Lambda (runtime may differ); apply this rule only to their code if implemented in Go. When in doubt, apply to any `services/**/*.go` code.
+**Applicable services:** Aggregator and Analytics are implemented in Go; this rule applies to them only. **Ingestion is implemented in TypeScript** — see `testing_typescript_services.mdc`. Forwarder is AWS Lambda (language TBD). Do not apply this rule to `services/ingestion/**`.
 
 ---
 

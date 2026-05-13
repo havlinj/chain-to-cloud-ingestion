@@ -3,6 +3,7 @@ title: Coding Style & Conventions
 description: Coding standards and clean code principles for the Chain-to-Cloud Voting system (Go services + Terraform + event contracts).
 globs:
   - "services/**/*.go"
+  - "services/ingestion/**/*.ts"
   - "infra/**/*.tf"
   - "smart-contract/**/*.rs"
   - "services/**"
@@ -167,6 +168,30 @@ Forbidden:
 - Repositories should be mockable via small interfaces.
 - Avoid mocks in production code.
 - Keep tests deterministic; avoid time-dependent flakiness.
+
+---
+
+# TypeScript (services/ingestion)
+
+Ingestion is the only backend service written in TypeScript. It runs on AWS Lambda (Node.js 20).
+
+## Layout
+
+- `src/handler.ts` — Lambda entrypoint
+- `src/config.ts` — environment configuration
+- `src/app/` — orchestration
+- `src/domain/` — event types and normalization (no AWS/Solana SDK imports)
+- `src/blockchain/` — Solana RPC and log parsing
+- `src/publisher/` — SNS adapter
+
+## Rules
+
+- Use strict TypeScript and keep functions small and focused.
+- Configuration from environment variables only; validate required values at startup.
+- No business logic, projections, or database access.
+- Do not mutate parsed events after normalization; publish immutable JSON envelopes.
+- Prefer structured `console.log` JSON lines with `service`, `event_id`, and `event_type` when logging processed events.
+- Bundle for Lambda with esbuild; tests with Vitest. See `testing_typescript_services.mdc`.
 
 ---
 

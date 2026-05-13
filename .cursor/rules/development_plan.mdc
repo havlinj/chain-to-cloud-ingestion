@@ -27,7 +27,7 @@ The high-level flow from `architecture.mdc` is:
 
 | Phase   | Architecture summary |
 |--------|------------------------|
-| **Phase 1** | Blockchain → Ingestion Lambda → SQS → Aggregator (Go) → DynamoDB → **gRPC API** (for UI) |
+| **Phase 1** | Blockchain → Ingestion Lambda (TypeScript) → SNS/SQS → Aggregator (Go) → DynamoDB → **gRPC API** (for UI) |
 | **Phase 2** | SQS → Forwarder Lambda → GCP Pub/Sub → Analytics (Go) → BigQuery; **UI first slice** (Elixir/Phoenix LiveView) |
 | **Phase 3** | Event backbone: Kafka (opt.); **UI full slice** (streaming, trends); Grafana, E2E, runbooks |
 | **Phase 4** | **Voting playground:** primitive voting UI (on-chain) + **simulation orchestrator** (many simulated voters / event injection) to observe full pipeline |
@@ -58,10 +58,11 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 
 ### Ingestion service
 
-- **Runtime:** AWS Lambda.
-- **Responsibilities:** Connect to blockchain RPC/WebSocket, detect contract events, normalize to canonical JSON (including `event_id`, `event_type`, `timestamp`, `source`, `version`), publish to SQS.
+- **Runtime:** AWS Lambda (Node.js 20).
+- **Language:** TypeScript.
+- **Responsibilities:** Connect to blockchain RPC/WebSocket, detect contract events, normalize to canonical JSON (including `event_id`, `event_type`, `timestamp`, `source`, `version`), publish to SNS (event bus fan-out).
 - **No business logic:** Only capture and normalize; no projections, no DB.
-- **Config:** Queue URL, RPC endpoint, contract address from environment.
+- **Config:** SNS topic ARN, RPC endpoint, program ID from environment.
 
 ### Event bus (AWS)
 
@@ -90,8 +91,8 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 
 ### Quality and CI/CD
 
-- **Lint and test:** Go lint/test for aggregator; Rust lint/test for contract; run in CI.
-- **Build and deploy:** Build Lambda artifacts and aggregator binary; Terraform plan/apply for AWS (manual or automated apply for prod).
+- **Lint and test:** TypeScript test/typecheck for Ingestion; Go lint/test for Aggregator; Rust lint/test for contract; run in CI.
+- **Build and deploy:** Build Ingestion Lambda zip (Node.js bundle) and Aggregator Lambda/binary; Terraform plan/apply for AWS (manual or automated apply for prod).
 - **Docs:** Repository structure, ADR for major choices, `docs/progress/` entry for Phase 1.
 
 ## 1.3 Phase 1 Exit Criteria
@@ -278,7 +279,7 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 
 | Phase | Focus | Main work packages |
 |-------|--------|---------------------|
-| **1** | Operational pipeline (AWS) | Contract, Ingestion, SQS, Aggregator, DynamoDB, **gRPC API**, AWS Terraform, basic observability, CI |
+| **1** | Operational pipeline (AWS) | Contract, Ingestion (TypeScript), SNS/SQS, Aggregator (Go), DynamoDB, **gRPC API**, AWS Terraform, basic observability, CI |
 | **2** | Cross-cloud, analytics, **UI first slice** | Forwarder, Pub/Sub, Analytics, BigQuery, GCP Terraform, **user_interface/** (Elixir/Phoenix LiveView, Aggregator gRPC client, list + detail), CI for GCP and UI |
 | **3** | Event backbone, **UI full slice**, production | Kafka/MSK (opt.), schema registry (opt.), **UI streaming + Analytics gRPC + voter activity**, Grafana, alerting, E2E tests, load/runbooks, OIDC/security |
 | **4** | **Playground & simulation** | Primitive **voting UI** (create proposal, vote on chain); **configurable orchestrator** (chain mode; injection mode optional); playground runbook; observe full pipeline and dashboards |

@@ -1,0 +1,89 @@
+---
+title: TypeScript Service Testing
+description: Testing rules for the TypeScript Ingestion service.
+globs:
+  - "services/ingestion/**/*.ts"
+  - "services/ingestion/package.json"
+  - "!**/.cursor/**"
+alwaysApply: false
+version: 1.0.0
+schema: cursor-mdc-v1
+tags: [testing, typescript, ingestion, lambda, unit-tests]
+cursor:
+  version: 1.0.0
+  features: [test-generation, code-generation-guidance]
+  experimental: false
+---
+
+# TypeScript Service Testing
+
+This document defines testing conventions for the **Ingestion** service (`services/ingestion/`).
+
+**Applicable services:** Ingestion only. Aggregator and Analytics use `testing_go_services.mdc`.
+
+---
+
+## Test Runner
+
+Use **Vitest**.
+
+Preferred commands:
+
+```bash
+npm test
+npm run typecheck
+```
+
+---
+
+## Unit Test Rules
+
+Unit tests should focus on:
+
+- event normalization and envelope fields
+- log parsing from chain payloads
+- configuration loading and validation
+- orchestration with mocked fetcher and publisher
+
+Unit tests must:
+
+- avoid real AWS and Solana RPC calls
+- use small fakes or mocks for `ChainEventFetcher` and `EventPublisher`
+- stay deterministic
+
+---
+
+## Mandatory Scenarios
+
+Cover at least:
+
+1. valid chain log is normalized and published
+2. malformed or non-event logs are ignored safely
+3. missing required environment variables fail fast
+4. `VoteCast`, `ProposalCreated`, and `ProposalClosed` normalization paths
+
+Event-driven expectations from `testing_event_driven.mdc` still apply at the system level; Ingestion may emit duplicates when slot windows overlap, and downstream consumers must deduplicate.
+
+---
+
+## Forbidden Patterns
+
+Do not:
+
+- call live Solana RPC in unit tests
+- publish to real SNS in unit tests
+- rely on sleep-based timing unless strictly necessary
+
+---
+
+## References
+
+- **service_boundaries.mdc** — Ingestion responsibilities and forbidden behavior.
+- **event_schema.mdc** — Canonical event envelope and payload fields.
+- **testing_event_driven.mdc** — Duplicate delivery and malformed event expectations for the wider pipeline.
+
+---
+
+# End of TypeScript Service Testing
+
+---

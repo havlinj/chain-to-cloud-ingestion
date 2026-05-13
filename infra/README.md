@@ -4,7 +4,7 @@ Terraform for AWS (operational pipeline) and GCP (analytics). Each cloud has its
 
 ## Structure
 
-- **infra/aws/** — Lambda, SNS, SQS, DynamoDB, IAM, CloudWatch (ingestion, event bus, aggregator).
+- **infra/aws/** — Lambda (Ingestion: Node.js/TypeScript; Aggregator: Go), SNS, SQS, DynamoDB, IAM, CloudWatch (ingestion, event bus, aggregator).
 - **infra/gcp/** — Pub/Sub, BigQuery, Cloud Run, IAM (forwarder target, analytics).
 - **infra/aws/modules/** — Reusable AWS modules (lambda, sqs, dynamodb, etc.) when you add real resources.
 - **infra/gcp/modules/** — Reusable GCP modules (cloudrun, pubsub, bigquery, etc.) when you add real resources.

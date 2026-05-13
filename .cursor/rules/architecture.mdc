@@ -216,6 +216,19 @@ Smart contracts must emit structured events.
 
 ---
 
+## Backend Services
+
+Languages by service:
+
+- **Ingestion** — TypeScript (AWS Lambda, Node.js 20)
+- **Aggregator** — Go (AWS)
+- **Forwarder** — AWS Lambda (language TBD; transport adapter only)
+- **Analytics** — Go (GCP Cloud Run)
+
+Ingestion and Forwarder are thin adapters; Aggregator and Analytics own projections and follow `service_style.mdc`.
+
+---
+
 ## AWS
 
 Used for operational processing.
@@ -287,6 +300,10 @@ Avoid static credentials.
 Runtime:
 
 AWS Lambda
+
+Language:
+
+TypeScript (Node.js 20)
 
 Responsibilities:
 
@@ -507,9 +524,9 @@ Expected repository structure:
 repo/
   smart-contract/
   services/
-    ingestion/
-    aggregator/
-    analytics/
+    ingestion/             # TypeScript, AWS Lambda
+    aggregator/            # Go
+    analytics/             # Go
     forwarder/
   user_interface/          # Elixir/Phoenix LiveView app consuming gRPC from Aggregator and Analytics
   tools/                   # Phase 4: voting UI (primitive), simulation orchestrator (load / event injection)

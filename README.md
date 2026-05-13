@@ -13,6 +13,7 @@ This is an **exploratory, experimental, learning-focused project**. The goal is 
 - **Messaging middleware** — AWS SQS/SNS for MVP fan-out; **Kafka** is an optional Phase 3 evolution for replay, consumer lag, and stronger log semantics.
 - **System observability** — **Grafana** for cross-cloud dashboards; datasources include CloudWatch, GCP Monitoring, and BigQuery; structured logs and correlation fields for traceability.
 - **Go** — Primary language for Aggregator and Analytics services; clean layering (handlers, service, domain, repository), idiomatic Go, and strict idempotency in event handlers.
+- **TypeScript** — Ingestion service on AWS Lambda (Node.js 20); thin blockchain-to-SNS adapter with normalized event envelopes; Vitest for unit tests.
 - **Elixir UI** — **Phoenix LiveView** application in `user_interface/` acting as a client of the backend; consumes **gRPC** read/streaming APIs from Aggregator (and optionally Analytics); no participation in the event bus.
 - **gRPC API** — Read and query APIs exposed by the Go services (e.g. ListProposals, GetProposal, WatchProposals, StreamProposalVotes, GetVoterActivity, and analytics trends); contract for the Governance & Voting UI; exposed via API Gateway or gRPC-Web proxy as needed.
 
@@ -46,7 +47,7 @@ The system is intended to feel like a **realistic cloud-native system**, not a t
 **Mental model:** *Blockchain → Event stream → Projections.*
 
 1. **Smart contract** (Solana, Rust/Anchor) — Manages proposals and votes; emits `ProposalCreated`, `VoteCast`, `ProposalClosed`.
-2. **Ingestion** (AWS Lambda) — Connects to chain RPC/WebSocket, normalizes events, publishes to the event bus. No business logic; strictly an adapter from blockchain to bus.
+2. **Ingestion** (TypeScript, AWS Lambda) — Connects to chain RPC, normalizes events, publishes to SNS. No business logic; strictly an adapter from blockchain to bus.
 3. **Event bus (fan-out)** — One SNS topic (or two SQS queues) so that **Aggregator** and **Forwarder** both receive every event.
 4. **Aggregator** (Go, AWS) — Consumes from SQS, maintains the **operational projection** in DynamoDB (proposals, vote counts, voter activity). Exposes **gRPC read API** for the UI.
 5. **Forwarder** (AWS Lambda) — Consumes from SQS, forwards events to **GCP Pub/Sub**. Stateless bridge only.
@@ -64,7 +65,7 @@ The system is intended to feel like a **realistic cloud-native system**, not a t
 ```
 smart-contract/          # Solana program (Rust/Anchor)
 services/
-  ingestion/             # AWS Lambda — chain → event bus
+  ingestion/             # TypeScript, AWS Lambda — chain → SNS
   aggregator/            # Go — SQS → DynamoDB, gRPC API
   forwarder/             # AWS Lambda — SQS → Pub/Sub
   analytics/             # Go, GCP — Pub/Sub → BigQuery, optional gRPC
@@ -96,12 +97,12 @@ Events use a **canonical envelope**: `event_id`, `event_type`, `timestamp`, `sou
 | Area            | Choice |
 |----------------|--------|
 | Blockchain     | Solana (Rust, Anchor) |
-| Ingestion      | AWS Lambda |
+| Ingestion      | TypeScript, AWS Lambda (Node.js 20) |
 | Event bus (MVP)| AWS SNS + SQS (fan-out) |
 | Event bus (opt)| Kafka (Phase 3) |
 | Operational DB | DynamoDB |
 | Analytics store| BigQuery |
-| Backend APIs   | gRPC (Go) |
+| Backend APIs   | gRPC (Go — Aggregator, Analytics) |
 | UI             | Elixir, Phoenix, LiveView |
 | Infra          | Terraform (AWS + GCP) |
 | CI/CD          | GitHub Actions (OIDC preferred) |
@@ -115,7 +116,7 @@ Events use a **canonical envelope**: `event_id`, `event_type`, `timestamp`, `sou
 - **Event schema:** `.cursor/rules/event_schema.mdc`
 - **Coding and service style:** `.cursor/rules/coding_style.mdc`, `.cursor/rules/service_style.mdc`
 - **Agent workflow:** `.cursor/rules/agent/agent_workflow.mdc`
-- **Testing:** `.cursor/rules/testing/` (general, Go, e2e, event-driven, smart contract, infra)
+- **Testing:** `.cursor/rules/testing/` (general, Go, TypeScript/Ingestion, e2e, event-driven, smart contract, infra)
 - **UI (Elixir/LiveView):** `.cursor/rules/user_interface/elixir_ui.mdc`
 
 ---

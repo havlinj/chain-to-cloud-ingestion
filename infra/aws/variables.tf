@@ -58,9 +58,50 @@ variable "log_retention_days" {
 
 # Lambda deployment packages. Leave empty to skip creating the Lambda resources (e.g. until first build).
 variable "ingestion_lambda_zip_path" {
-  description = "Path to the Ingestion Lambda deployment zip (Go binary). Empty string = do not create the Lambda."
+  description = "Path to the Ingestion Lambda deployment zip (Node.js bundle). Empty string = do not create the Lambda."
   type        = string
   default     = ""
+}
+
+variable "solana_rpc_url" {
+  description = "Solana RPC URL for the Ingestion Lambda. Leave empty until the Lambda is deployed."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "solana_program_id" {
+  description = "Deployed voting program public key for the Ingestion Lambda."
+  type        = string
+  default     = ""
+}
+
+variable "ingestion_lookback_slots" {
+  description = "How many recent slots the Ingestion Lambda scans per invocation."
+  type        = number
+  default     = 50
+
+  validation {
+    condition     = var.ingestion_lookback_slots > 0
+    error_message = "ingestion_lookback_slots must be greater than 0."
+  }
+}
+
+variable "ingestion_event_source" {
+  description = "Value for the event source field added by Ingestion."
+  type        = string
+  default     = "voting-contract"
+}
+
+variable "ingestion_event_version" {
+  description = "Event schema version written by Ingestion."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.ingestion_event_version > 0
+    error_message = "ingestion_event_version must be greater than 0."
+  }
 }
 
 variable "aggregator_lambda_zip_path" {

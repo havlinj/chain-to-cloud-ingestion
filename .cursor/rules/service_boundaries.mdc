@@ -107,6 +107,10 @@ Location:
 
 services/ingestion/
 
+Language:
+
+TypeScript (Node.js 20, AWS Lambda)
+
 Primary responsibility:
 
 Capture blockchain events and publish them to the event bus.
