@@ -34,6 +34,17 @@ Continued Phase 1 after Session 2 Terraform work. Goal: implement the Ingestion 
 - Lambda handler is designed for scheduled invocation (EventBridge); WebSocket subscription can be added later without changing normalization or SNS layers.
 - Session 2 progress doc still references Go for both Lambdas; Ingestion runtime is now Node.js/TypeScript only.
 
+## Session Close (2026-05-14)
+
+End-of-session planning after the implementation commit and progress doc:
+
+- **Cloud accounts:** Defer AWS and GCP signup until needed. Local development and unit tests do not require either cloud yet.
+- **AWS:** Open an account when ready for `terraform apply`, real Lambda/SNS/SQS, and first end-to-end pipeline test.
+- **GCP:** Wait until Phase 2 (Forwarder, Pub/Sub, Analytics, BigQuery).
+- **Solana devnet:** Useful earlier for smart-contract work; separate from AWS/GCP billing.
+- **Agreed next focus:** Aggregator in Go — SQS/Lambda handler, idempotent DynamoDB projections, handlers for all three event types, tests with mocked repository (no cloud dependency).
+- **Optional smaller follow-ups:** EventBridge schedule in Terraform (`validate` only), CI workflow for Ingestion (`npm test`, `npm run typecheck`).
+
 ## Next Steps
 
 - Implement Aggregator service in Go (SQS consumer, DynamoDB projections, idempotent event handlers).
