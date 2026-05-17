@@ -91,7 +91,8 @@ Responsibilities:
 - record votes
 - emit events
 - **enforce voting rules on-chain** (e.g. reject `vote` when proposal is closed or past `voting_ends_at`; deadline set at `create_proposal` or via `close_proposal`)
-- **enforce global voter eligibility (Phase 3):** Merkle allowlist + `grant` / `revoke`; one vote per wallet per proposal; emit eligibility events
+- **commit–reveal voting:** `commit_vote` / `reveal_vote`; phase deadlines; no public `option_id` until reveal
+- **enforce global voter eligibility (Phase 3):** Merkle allowlist + `grant` / `revoke` at commit; one commit per wallet per proposal; emit eligibility events
 
 Forbidden:
 
@@ -164,8 +165,9 @@ Allowed responsibilities:
 
 - consume events from SQS
 - update DynamoDB projections
-- maintain vote counts
-- maintain proposal state (including `status`, optional `voting_ends_at`, electorate snapshot fields from `ProposalCreated` — not from service config)
+- maintain vote counts from **`VoteRevealed`** only; expose `option_counts` via gRPC only when `results_visible`
+- maintain proposal state (`phase`, `commit_ends_at`, `reveal_ends_at`, electorate snapshot from `ProposalCreated`)
+- maintain per-voter participation (`has_committed`, `has_revealed`) for UI
 - maintain **append-only eligibility audit** projection from eligibility events (Phase 3; for transparency queries)
 - expose **gRPC read API** (ListProposals, GetProposal, streaming, voter activity, optional eligibility history) for the user interface; no synchronous RPC to other backend services
 

@@ -80,32 +80,59 @@ Example:
 
 ---
 
-# 5. VoteCast Event
+# 5. Commit–Reveal Voting Events
 
-Use **slot** (Solana slot number) for chain position; do not use block_number.
+Voting uses **commit–reveal**, not a single public `vote` transaction. Use **slot** (Solana slot number) for chain position; do not use block_number.
 
-Example (full envelope + payload):
+### VoteCommitted
+
+Emitted when a voter submits a commitment. **Must not include `option_id`.**
 
 ```json
 {
   "event_id": "550e8400-e29b-41d4-a716-446655440000",
-  "event_type": "VoteCast",
+  "event_type": "VoteCommitted",
   "timestamp": 1700000000,
   "source": "voting-contract",
   "version": 1,
   "proposal_id": "abc123",
-  "option_id": "1",
   "voter_pubkey": "wallet123",
+  "commitment": "hex-or-base58-hash",
   "slot": 100234,
   "tx_signature": "txabc"
 }
 ```
 
+### VoteRevealed
+
+Emitted when a voter reveals; program verified `hash(option_id ‖ salt ‖ …) == commitment`. **Drives tally** in Aggregator (`option_counts`).
+
+```json
+{
+  "event_id": "550e8400-e29b-41d4-a716-446655440001",
+  "event_type": "VoteRevealed",
+  "timestamp": 1700000100,
+  "source": "voting-contract",
+  "version": 1,
+  "proposal_id": "abc123",
+  "option_id": "1",
+  "voter_pubkey": "wallet123",
+  "slot": 100300,
+  "tx_signature": "txdef"
+}
+```
+
+### VoteCast (deprecated)
+
+Legacy single-step vote. **Do not emit** from new contract versions. Aggregator iteration 1 may still consume `VoteCast` until migration. New implementations use `VoteCommitted` + `VoteRevealed` only.
+
 ---
 
 # 6. ProposalCreated Event
 
-**Voting window:** If the contract enforces a voting deadline, include **`voting_ends_at`** (Unix timestamp or Solana slot — document which in the contract ADR). The contract enforces who may vote; Aggregator only stores this field for operational queries and UI. Do not define voting duration only in Aggregator config.
+**Commit–reveal phases:** Include deadlines and initial phase, e.g. `commit_ends_at`, `reveal_ends_at`, `phase: "commit"`. Document slot vs Unix timestamp in ADR `0003-commit-reveal-voting.md`.
+
+**Voting window:** The contract enforces phase transitions; Aggregator mirrors fields for UI countdowns only.
 
 **Electorate snapshot (Phase 3, transparency):** When voting starts, the contract **freezes** who may vote on this proposal. Include snapshot fields so auditors can see the exact registry state at open without replaying chain history:
 
@@ -127,20 +154,26 @@ Example (full envelope + payload):
   "proposal_id": "abc123",
   "title": "Upgrade protocol",
   "options": ["Yes", "No"],
-  "voting_ends_at": 1700086400,
+  "commit_ends_at": 1700040000,
+  "reveal_ends_at": 1700086400,
+  "phase": "commit",
   "electorate_merkle_root": "base58-or-hex-root",
   "electorate_registry_version": 3,
   "electorate_snapshot_slot": 100200
 }
 ```
 
-`voting_ends_at` and electorate fields are optional until the contract implements them; consumers must ignore unknown fields.
+`commit_ends_at`, `reveal_ends_at`, and electorate fields are optional until implemented; consumers must ignore unknown fields.
 
 ---
 
-# 7. ProposalClosed Event
+# 7. ProposalClosed / ProposalFinalized
 
-Sets operational `status` to closed in Aggregator. `vote` must already fail on-chain after close.
+**ProposalFinalized** — reveal phase complete; tally fixed; Aggregator sets `results_visible: true` and may expose `option_counts` to voter UI.
+
+**ProposalClosed** — manual or policy close; voting instructions fail on-chain. UI shows results only when `results_visible` is true (typically after finalize).
+
+`commit_vote` / `reveal_vote` must fail on-chain when not in the correct phase or after close.
 
 Example (full envelope + payload):
 
@@ -249,12 +282,15 @@ PascalCase
 
 Examples:
 
-VoteCast
+VoteCommitted
+VoteRevealed
 ProposalCreated
 ProposalClosed
+ProposalFinalized
 EligibleVotersRootUpdated
 VoterEligibilityGranted
 VoterEligibilityRevoked
+VoteCast
 
 ---
 

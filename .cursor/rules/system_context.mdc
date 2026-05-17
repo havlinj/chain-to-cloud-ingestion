@@ -31,7 +31,7 @@ This document gives the **mental model** of the project. For detailed flows, tec
 - Services communicate **only via events**. No direct service-to-service HTTP/RPC. Each service owns its own data store.
 - The **user interface** (e.g. Elixir/Phoenix LiveView in `user_interface/`) is a **client** of the Go services: it consumes their **gRPC read/query APIs** (Aggregator, optionally Analytics) and does not participate in the event bus.
 - Delivery is **at-least-once**; all event consumers must be **idempotent**.
-- **Voting window** (until when) and **voter eligibility** (who may vote) are enforced on the **smart contract**. Each proposal **freezes** its electorate at open; the global registry can change only for **future** proposals. Eligibility mutations are **transparent** via immutable events (Phase 3).
+- **Voting** uses **commit–reveal** on the smart contract (no public choice during commit phase). **Voter eligibility** and **phase deadlines** are enforced on-chain; each proposal **freezes** its electorate at open. **Aggregator** exposes ballot, participation, countdown, and **results only after finalize**; **wallet** submits commit/reveal. Eligibility mutations are **transparent** via immutable events (Phase 3).
 
 ---
 

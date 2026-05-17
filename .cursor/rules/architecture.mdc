@@ -331,9 +331,9 @@ Responsibilities:
 - consume events from SQS
 - maintain operational projections
 - update DynamoDB
-- expose **gRPC read API** (e.g. ListProposals, GetProposal, WatchProposals, StreamProposalVotes, GetVoterActivity) for the user interface; exposed via API Gateway (gRPC) or gRPC-Web proxy
+- expose **gRPC read API** (e.g. ListProposals, GetProposal, GetVoterParticipation, WatchProposals) for the user interface; **`option_counts` only when `results_visible`**; exposed via API Gateway (gRPC) or gRPC-Web proxy
 
-This service maintains **real-time state**. The gRPC API is the contract for the Governance & Voting UI (see **user_interface/** and `.cursor/rules/user_interface/elixir_ui.mdc`).
+This service maintains **operational state** for the UI (ballot, phase deadlines, participation, post-finalize results). See **`user_interface/elixir_ui.mdc`**. Tally updates from **`VoteRevealed`** events.
 
 ---
 
@@ -373,22 +373,32 @@ Responsibilities:
 
 # 8. Smart Contract Design
 
-The voting contract is intentionally simple.
+The voting contract uses **commit–reveal** so that **vote choices are not visible on-chain during the voting period**, while the process remains **auditable and verifiable** after reveal.
 
 Functions:
 
-create_proposal(title, options[], voting_ends_at) — or equivalent duration parameter
-vote(proposal_id, option_id)
-close_proposal(proposal_id)
+create_proposal(title, options[], commit_ends_at, reveal_ends_at)
+commit_vote(proposal_id, commitment, merkle_proof, registry_version) — eligibility checked here
+reveal_vote(proposal_id, option_id, salt)
+close_proposal(proposal_id) — optional early close per policy
+finalize_proposal(proposal_id) — optional if auto-finalize after `reveal_ends_at`
 
-**One open proposal at a time:** The contract must enforce that **at most one proposal is in “open” voting state** at any moment. `create_proposal` fails if another proposal is still open (not closed and not past `voting_ends_at`). This matches focused organizational voting and simplifies audit (“the electorate at this time was deciding this single question”). Concurrent proposals are **not** supported unless changed via ADR (e.g. for large-DAO mode). Enforced on-chain via program state (e.g. `active_proposal_id` or equivalent).
+**One open proposal at a time:** At most one proposal in an active voting lifecycle (`commit` or `reveal` phase) at any moment. `create_proposal` fails if another is still active. Enforced via program state (e.g. `active_proposal_id`).
 
+### Commit–reveal lifecycle
 
-**Voting window (who may vote and until when):** The **smart contract** is the source of truth. It must reject `vote` when the proposal is closed or past `voting_ends_at` (Solana slot/time). Off-chain services must not define voting duration alone in config.
+| Phase | On-chain | Visible to casual chain reader | Aggregator / voter UI |
+|-------|----------|--------------------------------|------------------------|
+| **Commit** | Voters submit `commitment = hash(option_id ‖ salt ‖ voter_pubkey ‖ proposal_id)` (exact formula in ADR) | Who committed, commitment hash — **not** the choice | Participation status only; **no** option counts |
+| **Reveal** | Voters submit `option_id` + `salt`; program verifies hash, emits `VoteRevealed` | Revealed choices become public | Still **no** interim results for voters until phase rules allow |
+| **Finalized** | Tally fixed; proposal closed for voting | Full transparency: all revealed votes auditable | **Results** (option counts) shown in UI |
 
-- **Manual close:** `close_proposal` sets closed state; `vote` fails while closed.
-- **Deadline:** Set at creation (e.g. `voting_ends_at`); `vote` fails after deadline even if not yet closed.
-- **Aggregator / UI:** Mirror `status`, optional `voting_ends_at` from `ProposalCreated` / `ProposalClosed` events for reads only; optional defense-in-depth checks on `VoteCast` must not replace on-chain enforcement. See **event_schema.mdc** and **service_boundaries.mdc**.
+- **Transparency** means: rules and commitments are public; anyone can verify each reveal matches its commit and the tally is correct. It does **not** mean live Yes/No scores during commit/reveal for voter-facing channels.
+- **Salt** is chosen by the voter, stored **off-chain** (wallet/local storage); UI must guide commit + reveal (two transactions). Missing reveal: document policy (vote not counted / late reveal window only).
+
+**Voting window:** Deadlines are on-chain (`commit_ends_at`, `reveal_ends_at`). Off-chain services mirror them for UI countdowns only.
+
+- **Aggregator / UI:** Project `phase`, deadlines, per-voter `has_committed` / `has_revealed`, and `option_counts` **only when `results_visible`** (after reveal phase ends / finalized). See **`user_interface/elixir_ui.mdc`** and **event_schema.mdc**.
 
 **Voter eligibility (who is allowed to vote at all):** Phase 3 (**development_plan.mdc**). Open “any wallet” voting is not production-usable (Sybil: many keypairs = many votes). The contract enforces a **global** allowlist with **frozen electorate per proposal** and a **transparent audit trail**.
 
@@ -398,9 +408,10 @@ close_proposal(proposal_id)
 | **`update_merkle_root`** | Publish new root; bump `version` (does not change electorates of proposals already open) |
 | **`grant_eligibility` / `revoke_eligibility`** | On-chain add/remove for the living registry; **revoke after a proposal opens does not remove** that voter from that proposal’s frozen electorate |
 | **Electorate snapshot on `create_proposal`** | Copy `electorate_merkle_root`, `electorate_registry_version`, `electorate_snapshot_slot` onto the proposal; **from voting start the electorate for that proposal is immutable** |
-| **Merkle proof at `vote`** | Proves pubkey is in the proposal’s **pinned** root/version, not the live registry |
+| **Merkle proof at `commit_vote`** | Proves pubkey is in the proposal’s **pinned** root/version, not the live registry |
 | **`GrantedVoter` / `RevokedVoter` PDA** | Evaluated relative to snapshot slot (grant/revoke before snapshot counts; changes after snapshot affect only later proposals) |
-| **`VoteRecord` PDA** | One vote per `(proposal_id, voter_pubkey)` |
+| **`Commitment` PDA** | One commit per `(proposal_id, voter_pubkey)`; stores commitment hash |
+| **`Reveal` / tally** | One successful reveal per commit; invalid reveal rejected |
 
 **Transparency (retroactive audit):** Every registry change emits an on-chain event (`EligibleVotersRootUpdated`, `VoterEligibilityGranted`, `VoterEligibilityRevoked`). `ProposalCreated` records the electorate snapshot used for that vote. Events are immutable and flow through Ingestion → Aggregator / Analytics so anyone can answer: *who was added or removed from the global registry, when*, and *which Merkle root/version applied to proposal X at open*.
 
@@ -409,7 +420,7 @@ close_proposal(proposal_id)
 1. **Canonical off-chain list** — Admin maintains the authoritative pubkey list (file/DB); publish **`list_hash`** (or content-addressed URI) with each `update_merkle_root` so third parties can verify the list matches the on-chain root.
 2. **Materialized snapshot at `create_proposal`** — Optionally emit or store an explicit member list for that proposal (e.g. IPFS CID, separate audit event, or Aggregator projection built when the snapshot is taken). Heavier on-chain/off-chain cost; clearer for auditors.
 
-Grant/revoke PDAs make **individual** adds/removes queryable on-chain; Merkle members are proven at `vote` time via proof, not enumerated on-chain.
+Grant/revoke PDAs make **individual** adds/removes queryable on-chain; Merkle members are proven at **`commit_vote`** via proof, not enumerated on-chain.
 
 Aggregator or BigQuery expose query APIs over eligibility events and, where available, the canonical list or materialized snapshot. The chain remains the source of truth for **enforcement**; the full electorate enumeration is a **transparency** concern resolved by the ADR approach above.
 
@@ -420,14 +431,17 @@ Admin tooling (off-chain) rebuilds the Merkle tree from the canonical list and s
 Events emitted:
 
 ProposalCreated
-VoteCast
+VoteCommitted
+VoteRevealed
 ProposalClosed
+ProposalFinalized
 EligibleVotersRootUpdated
 VoterEligibilityGranted
 VoterEligibilityRevoked
 
+`VoteCast` is **deprecated** (replaced by commit–reveal). Existing Aggregator iteration 1 may still consume `VoteCast` until the contract and handlers migrate.
 
-Events must be **data-rich** (include fields needed for projections, e.g. `voting_ends_at` on create when used). Eligibility events are required from Phase 3 onward.
+Events must be **data-rich** (phase deadlines, electorate snapshot, commitment/reveal fields). See **event_schema.mdc**.
 
 ---
 
@@ -435,12 +449,12 @@ Events must be **data-rich** (include fields needed for projections, e.g. `votin
 
 All events must include the **canonical envelope** (event_id, event_type, timestamp, source, version). Full field definitions and evolution rules: **event_schema.mdc**.
 
-Example VoteCast event (envelope + payload):
+Example `VoteRevealed` event (envelope + payload; tally source):
 
 ```json
 {
   "event_id": "uuid",
-  "event_type": "VoteCast",
+  "event_type": "VoteRevealed",
   "timestamp": 1700000000,
   "source": "voting-contract",
   "version": 1,
@@ -452,7 +466,7 @@ Example VoteCast event (envelope + payload):
 }
 ```
 
-(Solana uses **slot**; do not use block_number.) Downstream systems must treat events as immutable. Full schema: **event_schema.mdc**.
+`VoteCommitted` carries `commitment` hash only (no `option_id`). Solana uses **slot**; do not use block_number. Full schema: **event_schema.mdc**.
 
 ---
 
@@ -471,10 +485,12 @@ proposal_id
 Attributes:
 
 total_votes
-option_counts
-status
+option_counts (updated from `VoteRevealed` only; empty or hidden until `results_visible`)
+status / phase (commit | reveal | finalized | closed)
+commit_ends_at
+reveal_ends_at
+results_visible (bool; true after reveal phase ends / finalized)
 updated_at
-voting_ends_at (optional; from ProposalCreated when contract uses a deadline)
 electorate_merkle_root (optional; frozen at proposal open, Phase 3)
 electorate_registry_version (optional)
 electorate_snapshot_slot (optional)
@@ -493,8 +509,10 @@ voter_pubkey
 
 Attributes:
 
-votes_cast
-last_vote_timestamp
+has_committed (per proposal; from VoteCommitted)
+has_revealed (per proposal; from VoteRevealed)
+last_commit_timestamp
+last_reveal_timestamp
 
 ---
 
@@ -512,6 +530,8 @@ voter_pubkey
 timestamp
 slot
 tx_signature
+event_type (VoteRevealed for tally; VoteCommitted for participation analytics)
+commitment (for VoteCommitted rows)
 
 ---
 

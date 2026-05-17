@@ -5,9 +5,11 @@ AWS Lambda consumer that reads voting events from the Aggregator SQS queue (SNS 
 ## Responsibilities (iteration 1)
 
 - Unwrap SNS notification envelopes from SQS message bodies
-- Process `VoteCast` events only (other event types are logged and skipped)
+- Process **`VoteCast`** events only (legacy pipeline placeholder; **target:** `VoteCommitted` + `VoteRevealed` per `architecture.mdc`)
 - Deduplicate by `event_id` via the `processed_events` DynamoDB table
 - Update `proposals` (vote totals, per-option counts) and `voter_activity`
+
+**Target (Phase 3):** Tally from `VoteRevealed` only; track `has_committed` / `has_revealed`; set `results_visible` after finalize; gRPC must not expose interim `option_counts` to voters. See `user_interface/elixir_ui.mdc`.
 
 ## Voting window (deadline / duration)
 

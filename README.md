@@ -49,7 +49,7 @@ The system is intended to feel like a **realistic cloud-native system**, not a t
 |-------|--------|
 | **1** | AWS operational pipeline: contract (basic), Ingestion, SNS/SQS, Aggregator, DynamoDB, gRPC API |
 | **2** | GCP analytics: Forwarder, Pub/Sub, BigQuery, **UI first slice** (LiveView + Aggregator gRPC) |
-| **3** | **Global voter eligibility:** Merkle allowlist, admin grant/revoke, one vote per wallet per proposal |
+| **3** | **Commit–reveal voting** + Merkle allowlist; frozen electorate; voter UI read model |
 | **4** | Kafka (optional), **UI full slice** (streaming, trends), Grafana, E2E, production hardening |
 | **5** | **Playground:** primitive voting UI + simulation orchestrator |
 
@@ -61,13 +61,13 @@ Details: `.cursor/rules/development_plan.mdc`.
 
 **Mental model:** *Blockchain → Event stream → Projections.*
 
-1. **Smart contract** (Solana, Rust/Anchor) — Manages proposals and votes; enforces voting window and (from Phase 3) **global eligibility**; emits `ProposalCreated`, `VoteCast`, `ProposalClosed`, and eligibility events.
+1. **Smart contract** (Solana, Rust/Anchor) — **Commit–reveal** voting (`commit_vote`, `reveal_vote`); global eligibility (Phase 3); emits `VoteCommitted`, `VoteRevealed`, proposal lifecycle and eligibility events.
 2. **Ingestion** (TypeScript, AWS Lambda) — Connects to chain RPC, normalizes events, publishes to SNS. No business logic; strictly an adapter from blockchain to bus.
 3. **Event bus (fan-out)** — One SNS topic (or two SQS queues) so that **Aggregator** and **Forwarder** both receive every event.
 4. **Aggregator** (Go, AWS) — Consumes from SQS, maintains the **operational projection** in DynamoDB (proposals, vote counts, voter activity). Exposes **gRPC read API** for the UI.
 5. **Forwarder** (AWS Lambda) — Consumes from SQS, forwards events to **GCP Pub/Sub**. Stateless bridge only.
 6. **Analytics** (Go, GCP Cloud Run) — Consumes from Pub/Sub, writes raw events to BigQuery, builds analytical tables; optionally exposes gRPC query API for trends.
-7. **User interface** — Elixir/Phoenix LiveView app that calls Aggregator (and optionally Analytics) via gRPC only; no direct event bus access.
+7. **User interface** — Phoenix LiveView: **reads** Aggregator gRPC (ballot, participation, countdown, results after finalize); **writes** votes via wallet to Solana (`commit` + `reveal`). No interim result tallies for voters during voting.
 
 **Data ownership:** Aggregator owns DynamoDB; Analytics owns BigQuery. No service reads or writes another service’s store. Communication is **event-only**; the UI is a gRPC client.
 
@@ -75,23 +75,28 @@ Details: `.cursor/rules/development_plan.mdc`.
 
 ---
 
-## Voter Eligibility and Transparency (Phase 3)
+## Voting Model (commit–reveal)
 
-Open “any wallet can vote” is **not** the production model. The contract uses a **global living registry** plus **frozen electorate per proposal**:
+- **Commit phase** — Voters submit a hash commitment; **choice is not on-chain**.
+- **Reveal phase** — Voters submit `option_id` + salt; program verifies and tallies.
+- **Results** — Shown in UI only after reveal ends (`results_visible` from Aggregator). No live Yes/No board for voters during voting (reduces bandwagon effect; chain analysts can still inspect commitments).
 
-- **Merkle allowlist** — Admin maintains a canonical pubkey list; publishes `merkle_root` + `version` on-chain.
-- **Grant / revoke** — Changes the living registry for **future** proposals.
-- **One open proposal at a time** — Only a single proposal may be in voting at once (`create_proposal` fails if another is still open).
-- **Freeze at voting start** — On `create_proposal`, the contract snapshots `electorate_merkle_root`, `electorate_registry_version`, and `electorate_snapshot_slot`. **While that proposal is open, its voter set does not change** — later grants, revokes, or root updates do not affect it.
-- **Vote rules** — `vote` checks eligibility against the **proposal snapshot**; **one vote per wallet per proposal**.
+Aggregator iteration 1 may still process legacy **`VoteCast`** for pipeline tests; production target is **`VoteCommitted`** / **`VoteRevealed`**.
 
-**Transparency:** Every registry change emits an immutable on-chain event. `ProposalCreated` records the electorate at open (Merkle root + version + slot). The event pipeline stores an **append-only audit log** for adds/removes and per-proposal snapshots.
+## Voter UI (same app: gRPC + wallet)
 
-**Note:** The chain stores the Merkle **root**, not the full pubkey list. To list every eligible voter by name, the project uses a **canonical off-chain list** (verified against the root via hash) and/or a **materialized snapshot** at proposal open — see `architecture.mdc` §8 and a Phase 3 ADR in `docs/ADR/`.
+| Need | Source |
+|------|--------|
+| What is being voted on | Aggregator — title, options |
+| Whether the user voted | Aggregator — `has_committed`, `has_revealed`; wallet — commit/reveal txs |
+| Time until phase ends | Aggregator — `commit_ends_at` / `reveal_ends_at`, `phase` |
+| Results | Aggregator — `option_counts` when `results_visible` |
 
-**One human = one pubkey** remains an operational responsibility when curating the allowlist.
+Details: **`.cursor/rules/user_interface/elixir_ui.mdc`**.
 
-See **architecture.mdc** §8 and **event_schema.mdc** §6–8.
+## Eligibility and transparency (Phase 3)
+
+Global Merkle allowlist, frozen electorate per proposal, one active proposal, immutable eligibility audit events. See **architecture.mdc** §8, **event_schema.mdc**, **docs/ADR/** (`0001`, `0002`, `0003`).
 
 ---
 
@@ -142,6 +147,7 @@ Events use a **canonical envelope**: `event_id`, `event_type`, `timestamp`, `sou
 | Infra          | Terraform (AWS + GCP) |
 | CI/CD          | GitHub Actions (OIDC preferred) |
 | Observability  | Grafana, CloudWatch, GCP Monitoring |
+| Voting model | Commit–reveal on-chain; results in UI after finalize |
 | Voter eligibility | Global Merkle allowlist + grant/revoke (Phase 3) |
 
 ---

@@ -11,7 +11,12 @@ alwaysApply: false
 
 # Elixir UI Rules — Phoenix & LiveView
 
-This file defines conventions for the **user interface** layer when implemented with **Elixir**, **Phoenix**, and **LiveView**. The UI consumes gRPC read/streaming APIs from the Aggregator (operational data) and optionally from the Analytics service (trends). All repository rules (e.g. **general_rules.mdc** — English everywhere) apply.
+This file defines conventions for the **user interface** layer when implemented with **Elixir**, **Phoenix**, and **LiveView**. The UI has **two integration paths**:
+
+1. **gRPC → Aggregator** — read operational state (what is on the ballot, deadlines, voter status, results when allowed).
+2. **Wallet → Solana program** — write actions (`commit_vote`, `reveal_vote`); the UI does not submit votes via Aggregator.
+
+All repository rules (e.g. **general_rules.mdc** — English everywhere) apply.
 
 ---
 
@@ -19,21 +24,67 @@ This file defines conventions for the **user interface** layer when implemented 
 
 - The UI is a **client** of the Go services' gRPC APIs. It does not participate in the event bus (no SQS, no Pub/Sub).
 - It must **not** call other services directly except via the defined gRPC read/query APIs (Aggregator, Analytics).
-- It renders the Governance & Voting Dashboard: proposals list, proposal detail with live vote counts, voter activity, and optionally analytics trends.
+- **Voting** is **commit–reveal on-chain**; **reading** proposal context and results (when permitted) is via Aggregator.
+- It renders the Governance & Voting experience: proposals list, proposal detail, vote flow (commit + reveal), and results after voting ends.
 
 ---
 
-# 2. Stack
+# 2. What the Voter Sees (Aggregator gRPC + wallet)
+
+The same LiveView app serves **read** and **write** flows. Default **voter-facing** policy: **no interim option counts** during commit or reveal (even though determined actors could analyze chain data).
+
+| # | User need | Source | Shown when |
+|---|-----------|--------|------------|
+| **1** | **What is being voted on** | Aggregator `GetProposal` / `ListProposals` — `title`, `options` (labels only), `proposal_id`, `phase` | Always for open and past proposals |
+| **2** | **Whether the user already voted** | Aggregator — per connected wallet: `has_committed`, `has_revealed` (and optionally `commitment` tx link via explorer) | When wallet connected; during commit/reveal/finalized |
+| **3** | **Time until end of current phase** | Aggregator — `commit_ends_at`, `reveal_ends_at`, `phase`; UI computes countdown | During `commit` → countdown to commit end; during `reveal` → countdown to reveal end |
+| **4** | **Results (option counts)** | Aggregator `option_counts` / `total_votes` | **Only when `results_visible` is true** (after reveal phase ends / `ProposalFinalized`) |
+
+### Wallet actions (chain, not gRPC)
+
+| Phase | User action | On-chain instruction |
+|-------|-------------|----------------------|
+| **Commit** | Choose option in UI; app generates **salt** (stored locally); submit commitment | `commit_vote` |
+| **Reveal** | UI prompts to reveal before `reveal_ends_at`; submit option + salt | `reveal_vote` |
+
+- UI must **persist salt** securely for the session (local storage or wallet adapter pattern); warn if reveal deadline approaches.
+- UI must **not** send `option_id` to Aggregator before reveal (Aggregator learns choice only from `VoteRevealed` events).
+
+### What voter UI must not show (default)
+
+- Live Yes/No percentages or leader board during commit or reveal.
+- Other voters’ choices before `results_visible`.
+
+### Optional roles (later)
+
+- **Observer / admin** LiveView: commit participation count (no choice breakdown), eligibility audit links — still no interim option counts unless policy changes via ADR.
+
+---
+
+# 3. gRPC API expectations (Aggregator)
+
+Unary RPCs should support the voter flow (exact names in `.proto` when implemented):
+
+- `ListProposals`, `GetProposal` — include `phase`, `commit_ends_at`, `reveal_ends_at`, `results_visible`, `option_counts` (empty or omitted until results visible).
+- `GetVoterParticipation(proposal_id, voter_pubkey)` — `has_committed`, `has_revealed`.
+
+Streaming (Phase 4): refresh participation and phase transitions; **do not** stream option counts to voter clients until `results_visible`.
+
+**Analytics gRPC** (optional): trends **after** voting; not for the core four voter needs above.
+
+---
+
+# 4. Stack
 
 - **Language:** Elixir
 - **Framework:** Phoenix
-- **UI paradigm:** LiveView (server-rendered, WebSocket updates). No separate SPA in the browser; minimal JS where needed.
-- **API consumption:** gRPC client (e.g. **grpc-elixir** or `:gun` + protobuf) to call Aggregator and Analytics. Use the same `.proto` definitions as the Go services; generate Elixir client code from them.
-- **Location in repo:** Under a dedicated directory (e.g. `user_interface/` or `apps/ui/` at repo root). All Elixir/Phoenix/LiveView code and rules for this layer live under this area.
+- **UI paradigm:** LiveView (server-rendered, WebSocket updates). Minimal JS; wallet adapter for Solana transactions where needed.
+- **API consumption:** gRPC client to Aggregator (and optionally Analytics).
+- **Location in repo:** `user_interface/` at repo root.
 
 ---
 
-# 3. Project Structure
+# 5. Project Structure
 
 Prefer a clear layout under the UI root, for example:
 
@@ -42,89 +93,81 @@ user_interface/
 ├── lib/
 │   └── ui/
 │       ├── application.ex
-│       ├── repo.ex              # if DB used locally (e.g. session)
-│       ├── grpc/                # gRPC client wrappers / generated code
-│       │   └── ...
+│       ├── grpc/                # Aggregator / Analytics clients
+│       ├── chain/               # Solana tx building for commit / reveal (or delegate to wallet)
 │       ├── web/
-│       │   ├── components/      # LiveView components
-│       │   ├── live/            # LiveView modules (proposal_live, etc.)
+│       │   ├── components/
+│       │   ├── live/            # ProposalLive.Index, ProposalLive.Show, VoteLive, ResultsLive
 │       │   ├── router.ex
 │       │   └── endpoint.ex
 │       └── ...
 ├── mix.exs
 ├── config/
-└── proto/                       # symlink or copy of .proto files for client codegen (optional)
+└── proto/
 ```
 
-- Keep **gRPC client** usage in a dedicated context or module (e.g. `UI.Grpc.Aggregator`, `UI.Grpc.Analytics`) so LiveViews stay thin and only call these modules.
-- LiveView modules should focus on: mount, handle_params, handle_event, and rendering. Data fetching via gRPC (unary or stream) should be encapsulated in the gRPC client layer.
+- **gRPC** in `UI.Grpc.Aggregator`; **chain txs** in `UI.Chain.Voting` (or wallet-only).
+- LiveViews: `ProposalLive.Show` loads read model; `handle_event` triggers wallet commit/reveal.
 
 ---
 
-# 4. gRPC Usage
+# 6. gRPC Usage
 
-- **Unary RPCs:** Use for initial load (e.g. `ListProposals`, `GetProposal`, `GetVoterActivity`, `GetProposalTrend`). Call from LiveView mount or from a dedicated context.
-- **Server streaming:** Use for live updates (e.g. `WatchProposals`, `StreamProposalVotes`, `StreamVoterActivity`). Subscribe in `mount` or when entering a live view; push updates into LiveView state and let LiveView re-render. Handle disconnect/reconnect (e.g. on WebSocket drop) by resubscribing or reconnecting the gRPC stream.
-- **Configuration:** gRPC endpoint URLs (Aggregator, Analytics) must come from **environment/config** (e.g. `config :ui, :aggregator_grpc_url`). No hardcoded hosts or ports.
-- **Errors:** On gRPC errors (unavailable, deadline exceeded), show a clear message to the user and optionally retry or offer refresh. Do not crash the LiveView unnecessarily; handle errors in the client layer and return `{:error, reason}` to the LiveView.
-
----
-
-# 5. Language and Naming
-
-- **English everywhere:** Module names, function names, comments, user-facing strings, and log messages must be in English (see **general_rules.mdc**).
-- Use clear, domain-oriented names: `ProposalLive.Index`, `ProposalLive.Show`, `VoterActivityLive`, `Grpc.AggregatorClient`, etc.
-- Keep LiveView and component names aligned with the voting domain: proposals, votes, options, voter activity.
+- **Unary RPCs:** Initial load in `mount` / `handle_params`.
+- **Server streaming (Phase 4):** Phase countdown refresh, participation flags — not interim results for voters.
+- **Configuration:** gRPC URLs from environment; Solana RPC and program ID from environment.
+- **Errors:** Handle gRPC and wallet errors without crashing LiveView.
 
 ---
 
-# 6. LiveView Conventions
+# 7. Language and Naming
 
-- Prefer **functional components** for reusable pieces (cards, tables, vote breakdown).
-- Use **assigns** for data that the template needs; avoid large nested structures when a simple struct or map is enough.
-- For live streams (e.g. vote count updates), update the relevant assign when the gRPC stream sends a new message; LiveView will re-render.
-- Use `phx-click`, `phx-submit`, etc. for user actions; keep side effects in `handle_event` and call the gRPC client or context from there if needed (e.g. for actions that trigger a new request).
-- Avoid blocking the LiveView process: run gRPC calls in a Task or use async patterns if a call might be slow, and send results back to the LiveView with `send(self(), {:grpc_result, ...})` and handle in `handle_info`.
+- **English everywhere** (see **general_rules.mdc**).
+- Names aligned with domain: `ProposalLive`, `VoteCommitLive`, `Grpc.AggregatorClient`, etc.
 
 ---
 
-# 7. Styling and Assets
+# 8. LiveView Conventions
 
-- Use a minimal, consistent approach (e.g. Tailwind via `tailwind.config.js`, or project-chosen CSS). No requirement for a specific UI library; keep the dashboard readable and accessible.
-- Assets (CSS, JS) live under the standard Phoenix paths (e.g. `assets/`). Follow Phoenix conventions for static files and esbuild/tailwind.
-
----
-
-# 8. Testing
-
-- **Unit tests:** Test gRPC client modules with a mock or stub (e.g. bypass or a test double) so that tests do not call real Go services. Test LiveView logic (assigns, events) in isolation where possible.
-- **Integration / E2E:** If the project adds E2E tests for the UI, they may run against a real or test gRPC backend; document the required setup (e.g. test Aggregator URL) in the UI README or `docs/`.
-- All test names and descriptions in English.
+- Functional components for proposal card, phase banner, countdown, results chart (post-finalize only).
+- Assigns: `@proposal`, `@phase`, `@has_committed`, `@has_revealed`, `@results_visible`, `@option_counts`.
+- Wallet connect before commit; disable commit if not eligible (Aggregator can expose `eligible: bool` when Phase 3 eligibility is projected).
 
 ---
 
-# 9. Dependencies
+# 9. Styling and Assets
 
-- **Phoenix** and **Phoenix LiveView** as per official guides.
-- **gRPC:** Use a maintained Elixir gRPC client (e.g. **grpc** hex package) and ensure compatibility with the Go gRPC server (HTTP/2, same proto definitions).
-- **Protobuf:** Use the same `.proto` files as the Go services for consistency; generate Elixir code (e.g. with `protoc` + Elixir plugin or project tooling) and keep generated code under version control or document the codegen step in README.
+- Minimal, accessible layout (e.g. Tailwind). Clear phase indicators: “Commit period”, “Reveal period”, “Results”.
 
 ---
 
-# 10. Observability
+# 10. Testing
 
-- Use **structured logging** (e.g. Elixir Logger with metadata) for gRPC calls (start, success, error) and important user actions. Do not log sensitive data (e.g. full voter keys); redact if needed.
-- Include correlation or request identifiers in logs when available (e.g. from gRPC metadata or generated in the UI) to trace a request from UI to backend.
-- Optionally expose metrics (e.g. gRPC call duration, errors) if the project adopts a metrics library for the UI layer.
+- Mock Aggregator: `results_visible` false → template hides counts; true → shows results.
+- Mock wallet layer for commit/reveal event handlers.
+- English test names and descriptions.
+
+---
+
+# 11. Dependencies
+
+- Phoenix, LiveView, gRPC client, Solana wallet adapter (e.g. for signing); same `.proto` as Go services.
+
+---
+
+# 12. Observability
+
+- Log gRPC and wallet actions; do not log **salt** or pre-reveal `option_id` in production logs.
 
 ---
 
 # References
 
-- **general_rules.mdc** — English everywhere; repo-wide conventions.
-- **architecture.mdc** — gRPC read API for Aggregator and Analytics; no UI on event bus.
-- **service_boundaries.mdc** — Aggregator and Analytics expose read/query APIs only; no service-to-service RPC between backend services; UI is an external client.
-- **adr_process.mdc** — If the choice of Elixir/Phoenix/LiveView for the UI is recorded, do it in an ADR.
+- **architecture.mdc** §8 — commit–reveal contract, phases, Aggregator fields.
+- **event_schema.mdc** — `VoteCommitted`, `VoteRevealed`, `ProposalCreated` deadlines.
+- **user_interface/voting_ui.mdc** — primitive CLI/tooling for chain txs (Phase 5).
+- **service_boundaries.mdc** — UI is gRPC client only for reads; no event bus.
+- **development_plan.mdc** — Phase 2 UI first slice (read-only four needs); Phase 4 streaming.
 
 ---
 

@@ -9,7 +9,7 @@ alwaysApply: false
 
 # Primitive Voting UI Rules
 
-This file defines the **primitive voting UI** (Phase 5): a small, deliberately simple app that connects to the blockchain (e.g. Solana devnet), creates proposals, and casts votes. It is **not** the read-only Governance dashboard (that is the Elixir/Phoenix LiveView UI). Its only job is to trigger **real on-chain transactions** so that ingestion can pick up events and the rest of the pipeline (Aggregator, Analytics, read UI, Grafana) shows live activity. See **development_plan.mdc** Phase 5.
+This file defines the **primitive voting UI** (Phase 5): a small app that connects to the blockchain (e.g. Solana devnet), creates proposals, and performs **commit–reveal** votes (`commit_vote`, `reveal_vote`). It is **not** the main Governance LiveView UI (**elixir_ui.mdc**), which reads Aggregator gRPC and uses the wallet for the same on-chain instructions. Phase 5 tooling is for playground/load without the full LiveView app.
 
 ---
 
@@ -17,13 +17,13 @@ This file defines the **primitive voting UI** (Phase 5): a small, deliberately s
 
 - **Role:** Manual “play” — you run the voting UI to create a proposal and cast votes; those transactions hit the chain; ingestion (already running) reads chain events and publishes to the event bus; Aggregator and Analytics update; you see the result in the read UI and in Grafana.
 - **Architecture:** The voting UI is a **client of the blockchain only**. It does **not** call the ingestion service, the Aggregator, the event bus, or any backend API. The only write path is: **Voting UI → Blockchain (RPC)**. The pipeline (ingestion → SNS/SQS → Aggregator, etc.) reads from the chain independently. So the voting UI stays minimal and has no dependency on the rest of the stack except the chain (and config: RPC URL, program ID).
-- **Flow:** User runs voting UI → UI sends `create_proposal` / `vote` / `close_proposal` txs to chain → chain emits events → ingestion captures them → event bus → Aggregator, Forwarder → Analytics. You observe in read UI and Grafana.
+- **Flow:** User runs voting UI → `create_proposal` → `commit_vote` (with locally stored salt) → later `reveal_vote` → events `VoteCommitted` / `VoteRevealed` → ingestion → Aggregator (no interim counts in read UI until finalize).
 
 ---
 
 # 2. Scope
 
-- **Must support:** Create a proposal (title, options), cast a vote (proposal_id, option_id), optionally close a proposal. Contract interface per **architecture.mdc** §8 (Smart Contract Design).
+- **Must support:** Create proposal; **commit** (proposal_id + commitment); **reveal** (proposal_id + option_id + salt); optionally close/finalize. Per **architecture.mdc** §8 and **event_schema.mdc**.
 - **Must not:** Business logic beyond calling the contract; reading from Aggregator/Analytics (use the read UI for that); publishing to the event bus; any backend service calls.
 - **Config:** RPC endpoint (e.g. Solana devnet URL), program ID, keypair (path or env). No hardcoded keys or URLs; fail fast if required config is missing.
 
@@ -33,7 +33,7 @@ This file defines the **primitive voting UI** (Phase 5): a small, deliberately s
 
 - **Principle:** As simple as possible. No framework required; a small script or a minimal web form is enough.
 - **Suggested options:**
-  - **Node.js / TypeScript:** Single script or small CLI (e.g. `node voting-ui/cli.js create-proposal "Title" "Yes,No"`). Use `@solana/web3.js` (and Anchor TS client if the contract uses Anchor). One entrypoint or a few subcommands (create, vote, close).
+  - **Node.js / TypeScript:** CLI subcommands: `create-proposal`, `commit`, `reveal` (persist salt in a local file per proposal+voter). Use `@solana/web3.js` and Anchor client.
   - **Python:** Single script or CLI with `solana-py` and contract SDK if available. Same idea: minimal dependencies, env-based config, subcommands or flags.
 - **Alternative:** A minimal static HTML page + JS that uses a wallet adapter (e.g. Phantom) to sign and send txs; useful if you want “click in browser” instead of CLI. Still no backend; just chain RPC + wallet.
 - **Language and naming:** English everywhere (see **general_rules.mdc**): identifiers, comments, user-facing messages, README.
