@@ -52,9 +52,10 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 ### Smart contract
 
 - **Stack:** Rust, Solana Anchor (or alternative per architecture).
-- **Surface:** `create_proposal(title, options[])`, `vote(proposal_id, option_id)`, `close_proposal(proposal_id)`.
+- **Surface:** `create_proposal(title, options[], voting_ends_at)` (or duration at create), `vote(proposal_id, option_id)`, `close_proposal(proposal_id)`.
+- **Voting window:** Enforced **on-chain** — reject invalid `vote` when closed or past deadline; emit `voting_ends_at` on `ProposalCreated` when used. See **architecture.mdc** §8 and **event_schema.mdc**.
 - **Events:** `ProposalCreated`, `VoteCast`, `ProposalClosed` — data-rich, consistent with `event_schema.mdc`.
-- **Tests:** Unit / integration tests per `testing_smart_contract.mdc`.
+- **Tests:** Unit / integration tests per `testing_smart_contract.mdc` (including vote after close / after deadline rejected).
 
 ### Ingestion service
 
@@ -74,9 +75,10 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 
 - **Language:** Go; structure per `service_style.mdc` (cmd, internal/domain, service, repository, handlers).
 - **Responsibilities:** Consume messages from SQS, deserialize and validate events, apply idempotent projection updates (dedup/upsert), update DynamoDB.
-- **Projections:** Proposals table (proposal_id, total_votes, option_counts, status, updated_at), VoterActivity table (voter_pubkey, votes_cast, last_vote_timestamp).
+- **Projections:** Proposals table (proposal_id, total_votes, option_counts, status, updated_at, optional `voting_ends_at` from `ProposalCreated`), VoterActivity table (voter_pubkey, votes_cast, last_vote_timestamp). **Does not define voting duration** — mirrors contract via events; `ProposalCreated` / `ProposalClosed` handlers planned after `VoteCast` (iteration 1).
 - **Read API:** **gRPC** API (e.g. ListProposals, GetProposal; streaming in Phase 3) backed by DynamoDB; exposed via API Gateway (gRPC) or gRPC-Web proxy. Contract consumed by the user interface (Phase 2+); see `user_interface/` and `.cursor/rules/user_interface/elixir_ui.mdc`.
 - **Idempotency:** Required; use event_id or equivalent per `service_boundaries.mdc` and `coding_style.mdc`.
+- **Iteration 1 implementation:** `processed_events` table; read-check then apply projections; mark processed only after successful writes; compensating `UndoVoteCast` / `UndoRecordVoteCast` on partial failure or failed mark (see `services/aggregator/`). Unit tests cover duplicate delivery and SQS retry after voter failure.
 
 ### Infrastructure (AWS)
 
@@ -98,8 +100,15 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 ## 1.3 Phase 1 Exit Criteria
 
 - A vote on chain results in an event in SQS, aggregator updates DynamoDB, and the gRPC read API returns updated proposal state (verifiable by a gRPC client or UI in Phase 2).
-- Idempotent handling of duplicate events verified.
+- Idempotent handling of duplicate events verified, including at-least-once SQS delivery and retry after a failed projection write (Aggregator unit tests; compensating undo, not TransactWrite).
 - CI runs lint, tests, and Terraform plan successfully.
+
+### Phase 1 follow-ups (before production-hardened Aggregator)
+
+Tracked here so they are not lost; **not blockers** for closing the first Phase 1 slice (VoteCast + dedup + tests passing).
+
+- **DynamoDB `TransactWriteItems`:** Atomically update `proposals`, `voter_activity`, and `processed_events` in one request instead of mark-last plus compensating undo (stronger consistency on partial failure and mark failure).
+- **Concurrent Lambda invocations:** Two workers processing the same `event_id` in parallel can still race despite conditional mark; address with TransactWrite and/or stricter conditional updates when load or ops requirements justify it.
 
 ---
 

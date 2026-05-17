@@ -377,10 +377,16 @@ The voting contract is intentionally simple.
 
 Functions:
 
-create_proposal(title, options[])
+create_proposal(title, options[], voting_ends_at) — or equivalent duration parameter
 vote(proposal_id, option_id)
 close_proposal(proposal_id)
 
+
+**Voting window (who may vote and until when):** The **smart contract** is the source of truth. It must reject `vote` when the proposal is closed or past `voting_ends_at` (Solana slot/time). Off-chain services must not define voting duration alone in config.
+
+- **Manual close:** `close_proposal` sets closed state; `vote` fails while closed.
+- **Deadline:** Set at creation (e.g. `voting_ends_at`); `vote` fails after deadline even if not yet closed.
+- **Aggregator / UI:** Mirror `status`, optional `voting_ends_at` from `ProposalCreated` / `ProposalClosed` events for reads only; optional defense-in-depth checks on `VoteCast` must not replace on-chain enforcement. See **event_schema.mdc** and **service_boundaries.mdc**.
 
 Events emitted:
 
@@ -389,7 +395,7 @@ VoteCast
 ProposalClosed
 
 
-Events must be **data-rich**.
+Events must be **data-rich** (include fields needed for projections, e.g. `voting_ends_at` on create when used).
 
 ---
 
@@ -436,6 +442,7 @@ total_votes
 option_counts
 status
 updated_at
+voting_ends_at (optional; from ProposalCreated when contract uses a deadline)
 
 ---
 

@@ -31,6 +31,7 @@ This document gives the **mental model** of the project. For detailed flows, tec
 - Services communicate **only via events**. No direct service-to-service HTTP/RPC. Each service owns its own data store.
 - The **user interface** (e.g. Elixir/Phoenix LiveView in `user_interface/`) is a **client** of the Go services: it consumes their **gRPC read/query APIs** (Aggregator, optionally Analytics) and does not participate in the event bus.
 - Delivery is **at-least-once**; all event consumers must be **idempotent**.
+- **Voting window** (who may vote, until when) is enforced on the **smart contract**; Aggregator mirrors `status` / `voting_ends_at` from events for reads.
 
 ---
 

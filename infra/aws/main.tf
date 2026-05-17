@@ -151,6 +151,22 @@ resource "aws_dynamodb_table" "voter_activity" {
   }
 }
 
+resource "aws_dynamodb_table" "processed_events" {
+  name         = "${local.name_prefix}-processed-events"
+  billing_mode = var.dynamodb_billing_mode
+  hash_key     = "event_id"
+
+  attribute {
+    name = "event_id"
+    type = "S"
+  }
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project_name
+  }
+}
+
 # ------------------------------------------------------------------------------
 # IAM: Ingestion Lambda (publish to SNS, write logs)
 # ------------------------------------------------------------------------------
@@ -264,6 +280,19 @@ data "aws_iam_policy_document" "aggregator" {
   }
 
   statement {
+    sid    = "DynamoDBProcessedEvents"
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:DeleteItem"
+    ]
+    resources = [
+      aws_dynamodb_table.processed_events.arn
+    ]
+  }
+
+  statement {
     sid    = "CloudWatchLogs"
     effect = "Allow"
     actions = [
@@ -338,9 +367,10 @@ resource "aws_lambda_function" "aggregator" {
 
   environment {
     variables = {
-      SQS_QUEUE_URL                 = aws_sqs_queue.aggregator.url
-      DYNAMODB_PROPOSALS_TABLE      = aws_dynamodb_table.proposals.name
-      DYNAMODB_VOTER_ACTIVITY_TABLE = aws_dynamodb_table.voter_activity.name
+      SQS_QUEUE_URL                   = aws_sqs_queue.aggregator.url
+      DYNAMODB_PROPOSALS_TABLE        = aws_dynamodb_table.proposals.name
+      DYNAMODB_VOTER_ACTIVITY_TABLE   = aws_dynamodb_table.voter_activity.name
+      DYNAMODB_PROCESSED_EVENTS_TABLE = aws_dynamodb_table.processed_events.name
     }
   }
 }

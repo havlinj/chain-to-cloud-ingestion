@@ -105,6 +105,8 @@ Example (full envelope + payload):
 
 # 6. ProposalCreated Event
 
+**Voting window:** If the contract enforces a voting deadline, include **`voting_ends_at`** (Unix timestamp or Solana slot — document which in the contract ADR). The contract enforces who may vote; Aggregator only stores this field for operational queries and UI. Do not define voting duration only in Aggregator config.
+
 Example (full envelope + payload):
 
 ```json
@@ -116,13 +118,18 @@ Example (full envelope + payload):
   "version": 1,
   "proposal_id": "abc123",
   "title": "Upgrade protocol",
-  "options": ["Yes", "No"]
+  "options": ["Yes", "No"],
+  "voting_ends_at": 1700086400
 }
 ```
+
+`voting_ends_at` is optional in the schema until the contract implements it; consumers must ignore unknown fields.
 
 ---
 
 # 7. ProposalClosed Event
+
+Sets operational `status` to closed in Aggregator. `vote` must already fail on-chain after close.
 
 Example (full envelope + payload):
 

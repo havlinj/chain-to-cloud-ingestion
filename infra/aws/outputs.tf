@@ -48,6 +48,11 @@ output "dynamodb_voter_activity_table_name" {
   value       = aws_dynamodb_table.voter_activity.name
 }
 
+output "dynamodb_processed_events_table_name" {
+  description = "Name of the ProcessedEvents deduplication table."
+  value       = aws_dynamodb_table.processed_events.name
+}
+
 output "ingestion_lambda_role_arn" {
   description = "ARN of the IAM role for the Ingestion Lambda."
   value       = aws_iam_role.ingestion_lambda.arn
