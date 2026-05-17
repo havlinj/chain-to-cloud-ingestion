@@ -107,6 +107,14 @@ Example (full envelope + payload):
 
 **Voting window:** If the contract enforces a voting deadline, include **`voting_ends_at`** (Unix timestamp or Solana slot — document which in the contract ADR). The contract enforces who may vote; Aggregator only stores this field for operational queries and UI. Do not define voting duration only in Aggregator config.
 
+**Electorate snapshot (Phase 3, transparency):** When voting starts, the contract **freezes** who may vote on this proposal. Include snapshot fields so auditors can see the exact registry state at open without replaying chain history:
+
+- `electorate_merkle_root` — Merkle root pinned for this proposal
+- `electorate_registry_version` — registry `version` at snapshot
+- `electorate_snapshot_slot` — Solana slot when snapshot was taken
+
+Later `EligibleVotersRootUpdated` / grant / revoke events do **not** alter this proposal’s electorate.
+
 Example (full envelope + payload):
 
 ```json
@@ -119,11 +127,14 @@ Example (full envelope + payload):
   "proposal_id": "abc123",
   "title": "Upgrade protocol",
   "options": ["Yes", "No"],
-  "voting_ends_at": 1700086400
+  "voting_ends_at": 1700086400,
+  "electorate_merkle_root": "base58-or-hex-root",
+  "electorate_registry_version": 3,
+  "electorate_snapshot_slot": 100200
 }
 ```
 
-`voting_ends_at` is optional in the schema until the contract implements it; consumers must ignore unknown fields.
+`voting_ends_at` and electorate fields are optional until the contract implements them; consumers must ignore unknown fields.
 
 ---
 
@@ -146,7 +157,59 @@ Example (full envelope + payload):
 
 ---
 
-# 8. Versioning
+# 8. Voter Eligibility Events (Phase 3)
+
+Emitted by the smart contract when the **global living registry** changes. Same envelope as other events. These events are **immutable facts** for transparency: together with `ProposalCreated` snapshot fields they allow retroactive answers to who could vote on a proposal and who was added or removed from the registry, when.
+
+**Consumers must** append eligibility events to an audit projection (Aggregator DynamoDB and/or Analytics BigQuery). Do not drop or rewrite them. Vote counting still relies on on-chain `vote` enforcement; audit storage is for queries and UI.
+
+## EligibleVotersRootUpdated
+
+```json
+{
+  "event_id": "550e8400-e29b-41d4-a716-446655440010",
+  "event_type": "EligibleVotersRootUpdated",
+  "timestamp": 1700000000,
+  "source": "voting-contract",
+  "version": 1,
+  "merkle_root": "base58-or-hex-root",
+  "registry_version": 3
+}
+```
+
+## VoterEligibilityGranted
+
+```json
+{
+  "event_id": "550e8400-e29b-41d4-a716-446655440011",
+  "event_type": "VoterEligibilityGranted",
+  "timestamp": 1700000000,
+  "source": "voting-contract",
+  "version": 1,
+  "voter_pubkey": "wallet123"
+}
+```
+
+## VoterEligibilityRevoked
+
+```json
+{
+  "event_id": "550e8400-e29b-41d4-a716-446655440012",
+  "event_type": "VoterEligibilityRevoked",
+  "timestamp": 1700000000,
+  "source": "voting-contract",
+  "version": 1,
+  "voter_pubkey": "wallet123"
+}
+```
+
+`vote` must include `registry_version` and Merkle proof when relying on the tree (exact proof encoding documented in contract ADR).
+
+**Full member list:** Events carry `merkle_root`, not every pubkey. For `EligibleVotersRootUpdated`, an optional `list_hash` (or `list_uri`) field may be added once the ADR defines canonical off-chain list publication; until then, enumeration relies on admin tooling + grant/revoke events + materialized snapshot (if adopted).
+
+---
+
+# 9. Versioning
 
 Events must include version.
 
@@ -156,7 +219,7 @@ Never remove existing fields.
 
 ---
 
-# 9. Event Size
+# 10. Event Size
 
 Events should remain small.
 
@@ -164,7 +227,7 @@ Recommended maximum for the **event JSON body** (excluding transport envelope, e
 
 ---
 
-# 10. Schema Evolution
+# 11. Schema Evolution
 
 Allowed changes:
 
@@ -178,7 +241,7 @@ Forbidden changes:
 
 ---
 
-# 11. Event Naming
+# 12. Event Naming
 
 Event types must use:
 
@@ -189,10 +252,13 @@ Examples:
 VoteCast
 ProposalCreated
 ProposalClosed
+EligibleVotersRootUpdated
+VoterEligibilityGranted
+VoterEligibilityRevoked
 
 ---
 
-# 12. Consumer Expectations
+# 13. Consumer Expectations
 
 Consumers must:
 

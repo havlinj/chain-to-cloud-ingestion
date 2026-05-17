@@ -87,10 +87,11 @@ Rust
 
 Responsibilities:
 
-- manage proposals
+- manage proposals (at most **one open proposal** at a time unless changed by ADR)
 - record votes
 - emit events
 - **enforce voting rules on-chain** (e.g. reject `vote` when proposal is closed or past `voting_ends_at`; deadline set at `create_proposal` or via `close_proposal`)
+- **enforce global voter eligibility (Phase 3):** Merkle allowlist + `grant` / `revoke`; one vote per wallet per proposal; emit eligibility events
 
 Forbidden:
 
@@ -101,6 +102,10 @@ Forbidden:
 The smart contract must remain **simple and deterministic**.
 
 **Voting duration:** Not owned by Aggregator or Ingestion. Off-chain services mirror deadline/status from events only.
+
+**Voter eligibility:** Not owned by Aggregator or Ingestion. Only the contract (and admin tooling that submits chain txs) defines who may vote. The contract **freezes** electorate per proposal at `create_proposal`; living registry changes apply only to future proposals.
+
+**Eligibility transparency:** Aggregator and Analytics **may** store append-only eligibility audit data (from eligibility events + proposal snapshots) for gRPC/UI and BigQuery queries. They must not grant, revoke, or alter electorates; they only project immutable events.
 
 ---
 
@@ -160,8 +165,9 @@ Allowed responsibilities:
 - consume events from SQS
 - update DynamoDB projections
 - maintain vote counts
-- maintain proposal state (including `status`, optional `voting_ends_at` from events — not from service config)
-- expose **gRPC read API** (ListProposals, GetProposal, streaming, voter activity) for the user interface; no synchronous RPC to other backend services
+- maintain proposal state (including `status`, optional `voting_ends_at`, electorate snapshot fields from `ProposalCreated` — not from service config)
+- maintain **append-only eligibility audit** projection from eligibility events (Phase 3; for transparency queries)
+- expose **gRPC read API** (ListProposals, GetProposal, streaming, voter activity, optional eligibility history) for the user interface; no synchronous RPC to other backend services
 
 Forbidden responsibilities:
 
@@ -234,6 +240,7 @@ Examples:
 - votes per minute
 - voter growth
 - proposal popularity
+- append-only **`eligibility_events`** table for transparency (who was added/removed; snapshot per proposal via `ProposalCreated`)
 
 Forbidden responsibilities:
 
@@ -241,6 +248,7 @@ Forbidden responsibilities:
 - DynamoDB access
 - calling aggregator service
 - modifying blockchain state
+- altering or deleting eligibility audit rows (append-only)
 
 Analytics service operates on **historical event streams**.
 

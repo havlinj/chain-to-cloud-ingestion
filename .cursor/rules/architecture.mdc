@@ -181,7 +181,7 @@ BigQuery
 
 ---
 
-## Optional Phase 3
+## Optional Phase 4
 
 Kafka event backbone:
 
@@ -381,6 +381,8 @@ create_proposal(title, options[], voting_ends_at) — or equivalent duration par
 vote(proposal_id, option_id)
 close_proposal(proposal_id)
 
+**One open proposal at a time:** The contract must enforce that **at most one proposal is in “open” voting state** at any moment. `create_proposal` fails if another proposal is still open (not closed and not past `voting_ends_at`). This matches focused organizational voting and simplifies audit (“the electorate at this time was deciding this single question”). Concurrent proposals are **not** supported unless changed via ADR (e.g. for large-DAO mode). Enforced on-chain via program state (e.g. `active_proposal_id` or equivalent).
+
 
 **Voting window (who may vote and until when):** The **smart contract** is the source of truth. It must reject `vote` when the proposal is closed or past `voting_ends_at` (Solana slot/time). Off-chain services must not define voting duration alone in config.
 
@@ -388,14 +390,44 @@ close_proposal(proposal_id)
 - **Deadline:** Set at creation (e.g. `voting_ends_at`); `vote` fails after deadline even if not yet closed.
 - **Aggregator / UI:** Mirror `status`, optional `voting_ends_at` from `ProposalCreated` / `ProposalClosed` events for reads only; optional defense-in-depth checks on `VoteCast` must not replace on-chain enforcement. See **event_schema.mdc** and **service_boundaries.mdc**.
 
+**Voter eligibility (who is allowed to vote at all):** Phase 3 (**development_plan.mdc**). Open “any wallet” voting is not production-usable (Sybil: many keypairs = many votes). The contract enforces a **global** allowlist with **frozen electorate per proposal** and a **transparent audit trail**.
+
+| Mechanism | Purpose |
+|-----------|---------|
+| **`VoterRegistry`** (`merkle_root`, `version`, `authority`) | Living registry for **future** proposals; admin-maintained pubkey list |
+| **`update_merkle_root`** | Publish new root; bump `version` (does not change electorates of proposals already open) |
+| **`grant_eligibility` / `revoke_eligibility`** | On-chain add/remove for the living registry; **revoke after a proposal opens does not remove** that voter from that proposal’s frozen electorate |
+| **Electorate snapshot on `create_proposal`** | Copy `electorate_merkle_root`, `electorate_registry_version`, `electorate_snapshot_slot` onto the proposal; **from voting start the electorate for that proposal is immutable** |
+| **Merkle proof at `vote`** | Proves pubkey is in the proposal’s **pinned** root/version, not the live registry |
+| **`GrantedVoter` / `RevokedVoter` PDA** | Evaluated relative to snapshot slot (grant/revoke before snapshot counts; changes after snapshot affect only later proposals) |
+| **`VoteRecord` PDA** | One vote per `(proposal_id, voter_pubkey)` |
+
+**Transparency (retroactive audit):** Every registry change emits an on-chain event (`EligibleVotersRootUpdated`, `VoterEligibilityGranted`, `VoterEligibilityRevoked`). `ProposalCreated` records the electorate snapshot used for that vote. Events are immutable and flow through Ingestion → Aggregator / Analytics so anyone can answer: *who was added or removed from the global registry, when*, and *which Merkle root/version applied to proposal X at open*.
+
+**On-chain storage limit:** The program stores only **`merkle_root`** and **`version`**, not the full pubkey list. To answer *who exactly all eligible voters were* for a proposal or registry version, use one of (document choice in **`docs/ADR/`**):
+
+1. **Canonical off-chain list** — Admin maintains the authoritative pubkey list (file/DB); publish **`list_hash`** (or content-addressed URI) with each `update_merkle_root` so third parties can verify the list matches the on-chain root.
+2. **Materialized snapshot at `create_proposal`** — Optionally emit or store an explicit member list for that proposal (e.g. IPFS CID, separate audit event, or Aggregator projection built when the snapshot is taken). Heavier on-chain/off-chain cost; clearer for auditors.
+
+Grant/revoke PDAs make **individual** adds/removes queryable on-chain; Merkle members are proven at `vote` time via proof, not enumerated on-chain.
+
+Aggregator or BigQuery expose query APIs over eligibility events and, where available, the canonical list or materialized snapshot. The chain remains the source of truth for **enforcement**; the full electorate enumeration is a **transparency** concern resolved by the ADR approach above.
+
+Admin tooling (off-chain) rebuilds the Merkle tree from the canonical list and submits transactions. **Managing the list** (one human = one pubkey) is an operational responsibility of the admin, not solvable by the chain alone.
+
+**Program admin (Phase 3):** Registry `authority` must be **multisig-capable from the start** — e.g. `transfer_authority` to a multisig PDA (Squads or similar) on the same cluster; upgradeable program if policy changes are needed later. This is not a new blockchain; a bad immutable deploy may require a **new program ID** on the same chain. See **`docs/ADR/`** (admin authority) and Phase 3 implementation plan in **`development_plan.mdc`**.
+
 Events emitted:
 
 ProposalCreated
 VoteCast
 ProposalClosed
+EligibleVotersRootUpdated
+VoterEligibilityGranted
+VoterEligibilityRevoked
 
 
-Events must be **data-rich** (include fields needed for projections, e.g. `voting_ends_at` on create when used).
+Events must be **data-rich** (include fields needed for projections, e.g. `voting_ends_at` on create when used). Eligibility events are required from Phase 3 onward.
 
 ---
 
@@ -443,6 +475,13 @@ option_counts
 status
 updated_at
 voting_ends_at (optional; from ProposalCreated when contract uses a deadline)
+electorate_merkle_root (optional; frozen at proposal open, Phase 3)
+electorate_registry_version (optional)
+electorate_snapshot_slot (optional)
+
+### EligibilityAudit (optional, Phase 3)
+
+Append-only projection of eligibility events for transparency queries (partition key e.g. `event_id` or `timestamp` + sort key).
 
 ---
 
@@ -485,6 +524,23 @@ window_start
 votes_per_minute
 voter_growth_rate
 anomaly_flag
+
+---
+
+### eligibility_events (Phase 3)
+
+Append-only audit log mirrored from chain events:
+
+event_id
+event_type
+timestamp
+slot
+merkle_root (for EligibleVotersRootUpdated)
+registry_version
+voter_pubkey (for grant/revoke)
+proposal_id (when linked, e.g. snapshot reference)
+
+Supports retroactive queries: global add/remove timeline; electorate pinned per proposal via `ProposalCreated` fields in `votes_raw` or a `proposals` dimension table.
 
 ---
 
@@ -536,7 +592,7 @@ repo/
     analytics/             # Go
     forwarder/
   user_interface/          # Elixir/Phoenix LiveView app consuming gRPC from Aggregator and Analytics
-  tools/                   # Phase 4: voting UI (primitive), simulation orchestrator (load / event injection)
+  tools/                   # Phase 3: eligibility admin; Phase 5: voting UI, simulation orchestrator
   infra/
     aws/
     gcp/
@@ -557,7 +613,8 @@ Possible future improvements:
 - schema registry
 - replay capability
 - anomaly detection
-- **Phase 4 (see development_plan.mdc):** primitive voting UI (create proposal, vote on chain) + configurable simulation orchestrator (many simulated voters or event injection) so the system can be run as a “playground” and observed end-to-end (Aggregator, Analytics, UI, Grafana)
+- **Phase 3 (see development_plan.mdc):** global Merkle allowlist + admin grant/revoke on-chain
+- **Phase 5 (see development_plan.mdc):** primitive voting UI (create proposal, vote on chain) + configurable simulation orchestrator (many simulated voters or event injection) so the system can be run as a “playground” and observed end-to-end (Aggregator, Analytics, UI, Grafana)
 
 These should not complicate the MVP.
 

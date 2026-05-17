@@ -17,7 +17,7 @@ alwaysApply: false
 
 This document expands **Section 5: High Level Architecture** from `architecture.mdc` into a concrete, phased development plan.
 
-The three phases are **balanced in scope**: each phase delivers a coherent slice of the system and includes infrastructure, application code, observability, and quality work. No phase is a "mountain of work"; the last phase is not "almost nothing."
+Five phases are **balanced in scope**: each phase delivers a coherent slice of the system and includes infrastructure, application code, observability, and quality work.
 
 ---
 
@@ -29,8 +29,9 @@ The high-level flow from `architecture.mdc` is:
 |--------|------------------------|
 | **Phase 1** | Blockchain → Ingestion Lambda (TypeScript) → SNS/SQS → Aggregator (Go) → DynamoDB → **gRPC API** (for UI) |
 | **Phase 2** | SQS → Forwarder Lambda → GCP Pub/Sub → Analytics (Go) → BigQuery; **UI first slice** (Elixir/Phoenix LiveView) |
-| **Phase 3** | Event backbone: Kafka (opt.); **UI full slice** (streaming, trends); Grafana, E2E, runbooks |
-| **Phase 4** | **Voting playground:** primitive voting UI (on-chain) + **simulation orchestrator** (many simulated voters / event injection) to observe full pipeline |
+| **Phase 3** | **Global voter eligibility:** Merkle allowlist on-chain + admin grant/revoke; one vote per wallet per proposal |
+| **Phase 4** | Event backbone: Kafka (opt.); **UI full slice** (streaming, trends); Grafana, E2E, runbooks |
+| **Phase 5** | **Voting playground:** primitive voting UI (on-chain) + **simulation orchestrator** (many simulated voters / event injection) to observe full pipeline |
 
 This plan breaks each phase into **deliverables**, **infrastructure**, **services**, **observability**, and **quality** so that effort is distributed evenly.
 
@@ -53,6 +54,7 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 
 - **Stack:** Rust, Solana Anchor (or alternative per architecture).
 - **Surface:** `create_proposal(title, options[], voting_ends_at)` (or duration at create), `vote(proposal_id, option_id)`, `close_proposal(proposal_id)`.
+- **Single active proposal:** At most one proposal in open voting at a time; `create_proposal` rejects while another is open. See **architecture.mdc** §8.
 - **Voting window:** Enforced **on-chain** — reject invalid `vote` when closed or past deadline; emit `voting_ends_at` on `ProposalCreated` when used. See **architecture.mdc** §8 and **event_schema.mdc**.
 - **Events:** `ProposalCreated`, `VoteCast`, `ProposalClosed` — data-rich, consistent with `event_schema.mdc`.
 - **Tests:** Unit / integration tests per `testing_smart_contract.mdc` (including vote after close / after deadline rejected).
@@ -76,7 +78,8 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 - **Language:** Go; structure per `service_style.mdc` (cmd, internal/domain, service, repository, handlers).
 - **Responsibilities:** Consume messages from SQS, deserialize and validate events, apply idempotent projection updates (dedup/upsert), update DynamoDB.
 - **Projections:** Proposals table (proposal_id, total_votes, option_counts, status, updated_at, optional `voting_ends_at` from `ProposalCreated`), VoterActivity table (voter_pubkey, votes_cast, last_vote_timestamp). **Does not define voting duration** — mirrors contract via events; `ProposalCreated` / `ProposalClosed` handlers planned after `VoteCast` (iteration 1).
-- **Read API:** **gRPC** API (e.g. ListProposals, GetProposal; streaming in Phase 3) backed by DynamoDB; exposed via API Gateway (gRPC) or gRPC-Web proxy. Contract consumed by the user interface (Phase 2+); see `user_interface/` and `.cursor/rules/user_interface/elixir_ui.mdc`.
+- **Read API:** **gRPC** API (e.g. ListProposals, GetProposal; streaming in Phase 4) backed by DynamoDB; exposed via API Gateway (gRPC) or gRPC-Web proxy. Contract consumed by the user interface (Phase 2+); see `user_interface/` and `.cursor/rules/user_interface/elixir_ui.mdc`.
+- **Eligibility (deferred to Phase 3):** Phase 1 contract may allow any wallet for pipeline demos; **production-usable governance** requires the global Merkle allowlist and admin grant/revoke in Phase 3 (see below).
 - **Idempotency:** Required; use event_id or equivalent per `service_boundaries.mdc` and `coding_style.mdc`.
 - **Iteration 1 implementation:** `processed_events` table; read-check then apply projections; mark processed only after successful writes; compensating `UndoVoteCast` / `UndoRecordVoteCast` on partial failure or failed mark (see `services/aggregator/`). Unit tests cover duplicate delivery and SQS retry after voter failure.
 
@@ -119,9 +122,9 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 ## 2.1 Scope Summary
 
 - Forwarder reads from its **own** SQS queue (subscribed to the same SNS topic as the Aggregator queue) and publishes to GCP Pub/Sub.
-- Analytics service consumes Pub/Sub, writes raw events to BigQuery, maintains derived analytical tables. Optional: minimal gRPC query API (e.g. GetProposalTrend) for UI Phase 3.
+- Analytics service consumes Pub/Sub, writes raw events to BigQuery, maintains derived analytical tables. Optional: minimal gRPC query API (e.g. GetProposalTrend) for UI Phase 4.
 - GCP infrastructure and CI/CD for forwarder and analytics; cross-cloud observability.
-- **User interface (first slice):** Elixir/Phoenix LiveView app in `user_interface/` consuming Aggregator gRPC (list proposals, proposal detail); no streaming yet (Phase 3).
+- **User interface (first slice):** Elixir/Phoenix LiveView app in `user_interface/` consuming Aggregator gRPC (list proposals, proposal detail); no streaming yet (Phase 4).
 
 ## 2.2 Deliverables
 
@@ -143,7 +146,7 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 - **Responsibilities:** Consume Pub/Sub, validate event schema, write raw events to BigQuery (`votes_raw` and equivalent for proposals), maintain derived tables (e.g. `proposal_trends`: window_start, votes_per_minute, voter_growth_rate, anomaly_flag).
 - **Idempotency:** Dedup by event_id or (proposal_id, tx_signature, etc.) when writing to BigQuery.
 - **No operational state:** Does not call aggregator or touch DynamoDB; only Pub/Sub and BigQuery per `service_boundaries.mdc`.
-- **Optional for Phase 2:** Expose a minimal gRPC query API (e.g. GetProposalTrend) so the UI can integrate analytics in Phase 3; otherwise add in Phase 3.
+- **Optional for Phase 2:** Expose a minimal gRPC query API (e.g. GetProposalTrend) so the UI can integrate analytics in Phase 4; otherwise add in Phase 4.
 
 ### User interface (first slice)
 
@@ -179,11 +182,90 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 
 ---
 
-# Phase 3 — Event Backbone and Production Hardening
+# Phase 3 — Global Voter Eligibility (Merkle Allowlist)
 
-**Goal:** Replace or augment the event bus with a Kafka-style backbone, add cross-cloud observability (Grafana), complete the **user interface (full slice)** with streaming and analytics, and harden for production. Phase 3 is **not** "just Kafka": it includes replay, schema discipline, dashboards, **UI completion**, E2E tests, and operational runbooks.
+**Goal:** Make on-chain voting **production-usable** for a defined electorate. Only admin-approved pubkeys may vote. Prevent “infinite identities from nothing” for open internet voters by requiring membership in a **global** allowlist (not per-proposal lists).
 
 ## 3.1 Scope Summary
+
+- One **global `VoterRegistry`** on-chain: `authority`, `merkle_root`, `version` (living list for **new** proposals).
+- **Electorate freeze:** At **`create_proposal`** (voting starts), copy registry state onto the proposal (`electorate_merkle_root`, `electorate_registry_version`, `electorate_snapshot_slot`). While that proposal is open, **the set of eligible voters for that proposal must not change** — later `update_merkle_root`, `grant`, or `revoke` apply only to proposals created afterward.
+- **`vote`** checks eligibility against the **proposal snapshot**, not the live registry; one vote per `(proposal_id, voter_pubkey)`.
+- Admin can **bulk-update** the living list (`update_merkle_root`) and **incrementally** add/remove (`grant_eligibility`, `revoke_eligibility`) for future proposals.
+- **Transparency:** All registry mutations emit immutable events; `ProposalCreated` pins the electorate; pipeline stores them for retroactive queries (who could vote on proposal X; who was added/removed and when).
+- Off-chain admin tool rebuilds the Merkle tree from the canonical pubkey list (CSV/API) and submits root updates; optional publication of list hash for verification.
+- Ingestion unchanged in principle; Aggregator / Analytics **project eligibility audit events** (Phase 3) for read APIs and BigQuery.
+
+## 3.2 Deliverables
+
+### Smart contract
+
+- **`initialize_registry(merkle_root)`** — creates global registry; sets `authority`.
+- **`update_merkle_root(new_root)`** — authority only; increments `version`; emits `EligibleVotersRootUpdated`.
+- **`grant_eligibility(voter_pubkey)`** / **`revoke_eligibility(voter_pubkey)`** — authority only; creates/closes `GrantedVoter` / `RevokedVoter` PDAs; emits `VoterEligibilityGranted` / `VoterEligibilityRevoked`.
+- **`create_proposal`** — snapshots `electorate_merkle_root`, `electorate_registry_version`, `electorate_snapshot_slot` on the proposal account; includes them in `ProposalCreated`.
+- **`vote`** — checks eligibility against **proposal snapshot** (pinned root/version + grant/revoke state as of snapshot slot); rejects if already voted; voting window rules still apply.
+- **Tests:** vote without proof/grant fails; vote with valid proof against snapshot succeeds; second vote fails; `update_merkle_root` / grant / revoke **after** proposal open does not change who can vote on that proposal; root/version mismatch fails; snapshot fields present on `ProposalCreated`; `create_proposal` fails while another proposal is open; succeeds after close or deadline.
+
+### Admin tooling
+
+- **Location:** e.g. `tools/eligibility-admin/` or `smart-contract/scripts/`.
+- **Functions:** Import pubkey list → build Merkle tree → `update_merkle_root`; CLI for `grant` / `revoke`; document canonical list storage (file/DB).
+- **Docs:** Runbook for adding/removing members; who may hold `authority` (multisig as follow-up).
+
+### Events and downstream
+
+- New event types in **`event_schema.mdc`**: `EligibleVotersRootUpdated`, `VoterEligibilityGranted`, `VoterEligibilityRevoked`; `ProposalCreated` includes electorate snapshot fields.
+- **Aggregator (Phase 3):** Project **eligibility audit** (append-only changelog from eligibility events + snapshot per proposal) so gRPC/UI can answer historical questions without scanning chain manually.
+- **Analytics (Phase 3 or when GCP live):** Raw table `eligibility_events` (and/or reuse `votes_raw` pattern) in BigQuery for retroactive queries and Grafana panels.
+- **UI (optional):** Per-proposal “electorate at open” + global eligibility timeline; admin grant/revoke via tooling first.
+
+### Quality
+
+- Integration tests: devnet deploy registry, grant voter, cast vote, revoke, vote fails.
+- **ADR (required before contract implementation):**
+  - Merkle leaf format (e.g. `keccak(pubkey)`), tree depth, version semantics.
+  - **Full electorate enumeration:** chain stores root only, not every pubkey — choose canonical off-chain list + `list_hash` per root, and/or materialized snapshot at `create_proposal`; document how auditors resolve “who exactly could vote.”
+  - **Admin authority:** `transfer_authority`, upgrade path, multisig PDA as target admin (same cluster; not a new chain).
+
+## 3.3 Phase 3 Implementation Plan (code, not rules-only)
+
+Goal: move from **defined** governance to **implemented and tested** on devnet. Order matters; do not skip ADRs for contested choices.
+
+| Step | Deliverable | Outcome |
+|------|-------------|---------|
+| **0. Discuss & lock** | Open questions resolved with maintainer (enumeration, multisig product) | No ambiguous requirements before ADR `Accepted` |
+| **1. ADRs** | `docs/ADR/0001-electorate-enumeration-canonical-list.md` (Proposed → Accepted) | Canonical list + `list_hash`, Merkle leaf format, audit story |
+| | `docs/ADR/0002-program-admin-multisig-capable.md` (Proposed → Accepted) | `transfer_authority`, upgrade authority, devnet vs prod admin |
+| **2. Smart contract** | `smart-contract/` Anchor program | Registry, snapshot on `create_proposal`, single active proposal, `vote` + proof, grant/revoke, events |
+| **3. Contract tests** | Unit + devnet integration | All Phase 3 exit criteria covered on-chain |
+| **4. Admin tooling** | `tools/eligibility-admin/` (or scripts) | Build tree, `update_merkle_root`, grant/revoke, publish list + hash |
+| **5. Ingestion** | Parse new event types; envelope unchanged | SNS publishes eligibility + snapshot fields on `ProposalCreated` |
+| **6. Aggregator** | Handlers + `eligibility_audit` projection (optional gRPC) | Operational + transparency reads without chain scan |
+| **7. E2E slice** | One proposal lifecycle on devnet | create → vote (eligible) → reject (ineligible) → close → next proposal allowed |
+| **8. Docs** | `docs/progress/` entry; align `event_schema.mdc` with ADR fields | Implementable by others |
+
+**Avoid:** deploying a long-lived “open vote” program to devnet if the team will treat it as the real governance program — prefer one deploy with eligibility, or clearly label legacy program ID.
+
+**Not in Phase 3:** Kafka, full UI, playground orchestrator (Phases 4–5).
+
+## 3.4 Phase 3 Exit Criteria
+
+- ADRs **0001** and **0002** (or equivalent) status **Accepted**; implementation matches them.
+- A pubkey **not** in a proposal’s **frozen** electorate cannot vote on that proposal.
+- After `create_proposal`, `update_merkle_root`, `grant`, and `revoke` do **not** change who may vote on that proposal.
+- Admin can still mutate the **living** registry for **future** proposals (grant, revoke, new root).
+- Retroactive audit: from stored events, one can list (1) electorate snapshot for proposal X, (2) all global add/remove/root updates with timestamps.
+- Duplicate vote per proposal per wallet is rejected on-chain.
+- Eligibility and transparency rules documented in **`architecture.mdc`** §8 and **`service_boundaries.mdc`**.
+
+---
+
+# Phase 4 — Event Backbone and Production Hardening
+
+**Goal:** Replace or augment the event bus with a Kafka-style backbone, add cross-cloud observability (Grafana), complete the **user interface (full slice)** with streaming and analytics, and harden for production. Phase 4 is **not** "just Kafka": it includes replay, schema discipline, dashboards, **UI completion**, E2E tests, and operational runbooks.
+
+## 4.1 Scope Summary
 
 - Introduce Kafka (e.g. AWS MSK or Confluent) as the primary event backbone for at least part of the pipeline (e.g. ingestion → Kafka → aggregator; optionally forwarder from Kafka to Pub/Sub for GCP).
 - Schema registry (optional but recommended) for event contracts.
@@ -191,7 +273,7 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 - **User interface (full slice):** Streaming (WatchProposals, StreamProposalVotes), voter activity view, Analytics gRPC integration (trends); E2E tests covering UI where applicable.
 - Grafana dashboards, alerting, E2E tests, and operational runbooks.
 
-## 3.2 Deliverables
+## 4.2 Deliverables
 
 ### Kafka event backbone
 
@@ -211,7 +293,7 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 - **Forwarder (if applicable):** Consume from Kafka and publish to GCP Pub/Sub so analytics path remains unchanged; or consume from Kafka only and drop SQS for this path.
 - **Replay:** Ability to reset consumer group offset and reprocess; documented runbook.
 
-### Observability (Phase 3)
+### Observability (Phase 4)
 
 - **Grafana:** Dashboards per `architecture.mdc` §11 — datasources CloudWatch, GCP Monitoring, BigQuery; panels for vote throughput, end-to-end latency, SQS/Kafka queue depth, DLQ events, error rate, active voters.
 - **Alerting:** Alerts on DLQ depth, consumer lag, error rate; routing to a channel or ticketing (e.g. Slack, PagerDuty) as per project choice.
@@ -231,7 +313,7 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 - **Runbooks:** DLQ handling, consumer lag remediation, replay procedure, rollback steps.
 - **CI/CD:** OIDC for GitHub Actions where possible; Terraform plan/apply gates; secure secrets; no static long-lived credentials in repo.
 
-## 3.3 Phase 3 Exit Criteria
+## 4.3 Phase 4 Exit Criteria
 
 - Events flow through Kafka (or hybrid) with documented topology; replay is possible and tested.
 - Grafana dashboards show key metrics across AWS and GCP; at least one critical alert is configured and tested.
@@ -241,19 +323,20 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 
 ---
 
-# Phase 4 — Voting Playground & Simulation Orchestrator
+# Phase 5 — Voting Playground & Simulation Orchestrator
 
 **Goal:** Make the system **fun to use and observe**. Deliver a minimal **voting UI** so you can trigger real votes on the blockchain, and a **configurable orchestrator** that simulates many voters (or injects synthetic events) so you can watch the full pipeline light up with activity — Aggregator, Analytics, dashboards, Grafana — without manually casting one vote at a time.
 
-## 4.1 Scope Summary
+## 5.1 Scope Summary
 
 - **Primitive voting UI:** A small, deliberately simple app (web or CLI) that connects to the blockchain (devnet/testnet), creates proposals, and casts votes. You use it to “play”: submit a vote, see it flow through ingestion → Aggregator → read UI and Grafana.
 - **Simulation orchestrator:** A configurable tool that generates **many** voting-like actions, as if from many different users, so you can observe throughput, latency, and behaviour across the system. Two modes (or two tools):
   - **Chain mode:** Drives many simulated voters that send real transactions to the chain (devnet); requires funded test keys and configurable rate, proposal IDs, option distribution.
   - **Injection mode:** Publishes synthetic events (ProposalCreated, VoteCast) into the event bus (e.g. SNS or a test endpoint), so you can stress the pipeline and watch Aggregator/Analytics/UI without running a chain. Configurable: event rate, number of “voters”, proposal mix, duration.
-- Outcome: after Phase 4 you can run the orchestrator, open the read UI and Grafana, and watch live activity end-to-end.
+- Outcome: after Phase 5 you can run the orchestrator, open the read UI and Grafana, and watch live activity end-to-end.
+- **Note:** Simulated voters in chain mode must use **eligible** keypairs (granted or in Merkle tree) after Phase 3.
 
-## 4.2 Deliverables
+## 5.2 Deliverables
 
 ### Primitive voting UI
 
@@ -276,7 +359,7 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 - **Playground runbook:** “How to run the full stack for fun”: start chain (or use devnet), ingestion, aggregator, UI, Grafana; run the voting UI to create a proposal and vote; run the orchestrator (chain mode; injection mode if implemented); what to look at in the UI and in Grafana.
 - **ADR (optional):** If the simulation injection path is added (e.g. a dedicated SNS input or test endpoint), document it so it is not confused with production ingestion.
 
-## 4.3 Phase 4 Exit Criteria
+## 5.3 Phase 5 Exit Criteria
 
 - You can create a proposal and cast votes manually via the primitive voting UI and see them in the read UI and in the pipeline.
 - The orchestrator runs with a config file (or CLI flags); chain mode works against devnet with a set of funded test keys and configurable rate. Optional: injection mode generates a sustained stream of events for pipeline load testing.
@@ -290,10 +373,11 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 |-------|--------|---------------------|
 | **1** | Operational pipeline (AWS) | Contract, Ingestion (TypeScript), SNS/SQS, Aggregator (Go), DynamoDB, **gRPC API**, AWS Terraform, basic observability, CI |
 | **2** | Cross-cloud, analytics, **UI first slice** | Forwarder, Pub/Sub, Analytics, BigQuery, GCP Terraform, **user_interface/** (Elixir/Phoenix LiveView, Aggregator gRPC client, list + detail), CI for GCP and UI |
-| **3** | Event backbone, **UI full slice**, production | Kafka/MSK (opt.), schema registry (opt.), **UI streaming + Analytics gRPC + voter activity**, Grafana, alerting, E2E tests, load/runbooks, OIDC/security |
-| **4** | **Playground & simulation** | Primitive **voting UI** (create proposal, vote on chain); **configurable orchestrator** (chain mode; injection mode optional); playground runbook; observe full pipeline and dashboards |
+| **3** | **Global voter eligibility** | Merkle allowlist registry, grant/revoke, admin tooling, contract tests, ADR for tree format |
+| **4** | Event backbone, **UI full slice**, production | Kafka/MSK (opt.), schema registry (opt.), **UI streaming + Analytics gRPC + voter activity**, Grafana, alerting, E2E tests, load/runbooks, OIDC/security |
+| **5** | **Playground & simulation** | Primitive **voting UI** (create proposal, vote on chain); **configurable orchestrator** (chain mode; injection mode optional); playground runbook; observe full pipeline and dashboards |
 
-Each phase delivers a **shippable slice**. Phase 4 delivers a **playable** system: you can trigger real or simulated votes and watch activity everywhere (read UI, Grafana, BigQuery, queues) without hand-crafting events.
+Each phase delivers a **shippable slice**. Phase 5 delivers a **playable** system: you can trigger real or simulated votes and watch activity everywhere (read UI, Grafana, BigQuery, queues) without hand-crafting events.
 
 ---
 
@@ -305,7 +389,8 @@ Each phase delivers a **shippable slice**. Phase 4 delivers a **playable** syste
 - **Repository structure:** `architecture.mdc` §13
 - **Observability:** `architecture.mdc` §11, §15
 - **Testing:** `testing_e2e.mdc`, `testing_event_driven.mdc`, `testing_go_services.mdc`, `testing_smart_contract.mdc`
-- **User interface:** `user_interface/elixir_ui.mdc`, `user_interface/voting_ui.mdc` (primitive voting UI, Phase 4)
+- **User interface:** `user_interface/elixir_ui.mdc`, `user_interface/voting_ui.mdc` (primitive voting UI, Phase 5)
+- **Voter eligibility:** `architecture.mdc` §8, `event_schema.mdc` (eligibility events)
 
 ---
 

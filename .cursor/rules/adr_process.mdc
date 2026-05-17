@@ -72,7 +72,7 @@ Keep ADRs **short** (one page preferred). Use bullet points.
 - **Status:** Accepted
 - **Context:** We need a buffer between ingestion and aggregator; must support at-least-once delivery and DLQ.
 - **Decision:** Use AWS SQS as the event bus for Phase 1. Single queue; DLQ enabled.
-- **Consequences:** Aggregator must be idempotent; no ordering guarantee across proposals. Future: Kafka considered for Phase 3.
+- **Consequences:** Aggregator must be idempotent; no ordering guarantee across proposals. Future: Kafka considered for Phase 4.
 ```
 
 ---

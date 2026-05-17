@@ -1,6 +1,6 @@
 ---
 title: Primitive Voting UI Rules
-description: Rules for the minimal voting UI (Phase 4) that creates proposals and casts votes on the blockchain so you can play with the system and observe the full pipeline.
+description: Rules for the minimal voting UI (Phase 5) that creates proposals and casts votes on the blockchain so you can play with the system and observe the full pipeline.
 globs:
   - "tools/voting-ui/**"
   - "user_interface/voting-ui/**"
@@ -9,7 +9,7 @@ alwaysApply: false
 
 # Primitive Voting UI Rules
 
-This file defines the **primitive voting UI** (Phase 4): a small, deliberately simple app that connects to the blockchain (e.g. Solana devnet), creates proposals, and casts votes. It is **not** the read-only Governance dashboard (that is the Elixir/Phoenix LiveView UI). Its only job is to trigger **real on-chain transactions** so that ingestion can pick up events and the rest of the pipeline (Aggregator, Analytics, read UI, Grafana) shows live activity. See **development_plan.mdc** Phase 4.
+This file defines the **primitive voting UI** (Phase 5): a small, deliberately simple app that connects to the blockchain (e.g. Solana devnet), creates proposals, and casts votes. It is **not** the read-only Governance dashboard (that is the Elixir/Phoenix LiveView UI). Its only job is to trigger **real on-chain transactions** so that ingestion can pick up events and the rest of the pipeline (Aggregator, Analytics, read UI, Grafana) shows live activity. See **development_plan.mdc** Phase 5.
 
 ---
 
@@ -56,7 +56,7 @@ This file defines the **primitive voting UI** (Phase 4): a small, deliberately s
 # 5. Documentation
 
 - **README:** How to run the voting UI: install, set RPC URL and keypair, run create-proposal and vote; point to devnet/docs if needed. Short note that ingestion must be running and reading from the same chain so that events appear in the pipeline and in the read UI.
-- **Playground:** The full “play” story (voting UI + orchestrator + what to watch) is in **development_plan.mdc** Phase 4 and in the playground runbook in `docs/`.
+- **Playground:** The full “play” story (voting UI + orchestrator + what to watch) is in **development_plan.mdc** Phase 5 and in the playground runbook in `docs/`.
 
 ---
 
@@ -69,7 +69,7 @@ This file defines the **primitive voting UI** (Phase 4): a small, deliberately s
 
 # References
 
-- **development_plan.mdc** — Phase 4 (Voting Playground & Simulation Orchestrator); primitive voting UI deliverable.
+- **development_plan.mdc** — Phase 5 (Voting Playground & Simulation Orchestrator); primitive voting UI deliverable.
 - **architecture.mdc** — §8 Smart Contract Design (create_proposal, vote, close_proposal); chain as event source.
 - **general_rules.mdc** — English everywhere.
 - **user_interface/elixir_ui.mdc** — Read-only Governance UI (consumes gRPC); distinct from this voting UI.
