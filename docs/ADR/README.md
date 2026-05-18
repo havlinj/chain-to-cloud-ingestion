@@ -2,6 +2,8 @@
 
 Sequential decisions that lock implementation details. Format and process: `.cursor/rules/adr_process.mdc`.
 
+For how `ADR/`, `planning/`, and `progress/` relate, see [`../README.md`](../README.md).
+
 | Number | Title | Status |
 |--------|--------|--------|
 | 0001 | Electorate enumeration (canonical list + list_hash) | *Proposed — finalize after maintainer review* |

@@ -138,16 +138,17 @@ The explanation must be concise and technical.
 
 All meaningful project progress should be documented.
 
-Documentation should be written into the repository under:
+**Where to write what:** see `docs/README.md` — `docs/progress/` for session recaps (what was done), `docs/planning/` for active direction (WIP), `docs/ADR/` for accepted architectural decisions.
+
+Session recaps belong under:
 
 docs/progress/
 
 Suggested file structure:
 
 docs/progress/
-2026-architecture-setup.md
+session_1.md
 2026-event-pipeline.md
-2026-aggregator-implementation.md
 
 ---
 

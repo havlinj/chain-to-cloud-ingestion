@@ -171,4 +171,4 @@ To keep scope achievable: no complex frontends, enterprise compliance frameworks
 
 ---
 
-*This README reflects the authoritative architecture and conventions defined in `.cursor/rules/`. For detailed decisions and evolution, see `docs/ADR/` and `docs/progress/`.*
+*This README reflects the authoritative architecture and conventions defined in `.cursor/rules/`. For documentation layout (ADR, planning, progress), see [`docs/README.md`](docs/README.md).*
