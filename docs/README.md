@@ -26,4 +26,4 @@ Process for ADRs: `.cursor/rules/adr_process.mdc`.
 
 - **Active direction:** [`planning/agreed_direction_skip_votecast.md`](planning/agreed_direction_skip_votecast.md)
 - **Decisions (review status):** [`ADR/README.md`](ADR/README.md)
-- **Latest implementation recap:** [`progress/session_4.md`](progress/session_4.md)
+- **Latest session recap:** [`progress/session_5.md`](progress/session_5.md)
