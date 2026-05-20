@@ -1,17 +1,24 @@
 # Commit–reveal voting
 
-- **Status:** Proposed
-- **Context:** Public on-chain `vote(option_id)` exposes live tallies to any chain reader and voter UI, influencing outcomes. The project requires auditable governance without interim public scores for voter-facing channels.
-- **Decision:** *(To be finalized after maintainer discussion.)*
-  - Replace single-step `vote` with **`commit_vote`** then **`reveal_vote`**.
-  - Commitment: `hash(option_id ‖ salt ‖ voter_pubkey ‖ proposal_id)` (exact encoding TBD).
-  - Proposal phases: `commit` until `commit_ends_at`, then `reveal` until `reveal_ends_at`, then `finalized` with public tally.
-  - Emit **`VoteCommitted`** (no `option_id`) and **`VoteRevealed`** (includes `option_id` for Aggregator tally).
-  - Aggregator sets **`results_visible`** only after finalize; voter UI per **elixir_ui.mdc**.
-  - Salt stored off-chain by voter; document missed-reveal policy (e.g. vote not counted).
+- **Status:** Accepted
+- **Non-goals:** Legacy `VoteCast` or public `vote(option_id)` as the governance contract; interim `option_counts` in voter UI before `ProposalFinalized`; late reveal after `reveal_ends_at`.
+- **Context:** Public on-chain `vote(option_id)` exposes live tallies to any chain reader and voter UI, influencing outcomes. The project requires auditable governance without interim public scores for voter-facing channels. Legacy **`VoteCast`** is not implemented as a placeholder contract per `docs/planning/agreed_direction_skip_votecast.md`.
+- **Decision:**
+  - Replace single-step `vote` with **`commit_vote`** then **`reveal_vote`**. Do not emit **`VoteCast`** from new contract versions.
+  - **Commitment:** `SHA-256` over the concatenation (no separators): UTF-8 `proposal_id` ‖ 32-byte `salt` (client-generated random) ‖ 32-byte `voter_pubkey` ‖ UTF-8 `option_id`. Store the 32-byte digest in the on-chain `Commitment` PDA; emit `commitment` in events as **base58** of those 32 bytes.
+  - **Deadlines:** `commit_ends_at` and `reveal_ends_at` are **Unix seconds** (i64), enforced on-chain and mirrored in events and Aggregator for UI countdowns only.
+  - **Phases:** `commit` until `commit_ends_at`, then `reveal` until `reveal_ends_at`, then `finalized`. `commit_vote` and `reveal_vote` fail outside the correct phase or after close.
+  - **Finalize:** After `reveal_ends_at`, any caller may invoke **`finalize_proposal`** to emit **`ProposalFinalized`** and fix the tally state. (Auto-transition on other instructions without an explicit finalize call is not required in v1.)
+  - **At most one active proposal** in `commit` or `reveal` at a time; `create_proposal` fails if another is active (`active_proposal_id` pattern).
+  - **Events:** **`VoteCommitted`** (no `option_id`); **`VoteRevealed`** (includes `option_id`; **only** event type that drives Aggregator `option_counts`).
+  - **`results_visible`:** Aggregator (and voter-facing gRPC/UI) sets `results_visible: true` and may expose `option_counts` only after **`ProposalFinalized`**, not on each `VoteRevealed`. Per **elixir_ui.mdc**.
+  - **Salt:** Generated and stored **off-chain** by the voter (wallet/local storage); the program never stores salt.
+  - **Missed reveal:** A commit without a valid reveal before `reveal_ends_at` **does not count** toward the tally; no late-reveal window after `reveal_ends_at`.
 - **Consequences:**
-  - Two transactions per voter; UX and wallet guidance required.
-  - Ingestion/Aggregator migrate from deprecated `VoteCast`.
-  - Transparency: commitments and reveals are verifiable; enumeration of choices during commit phase is not suppressed from determined chain analysts.
-- **Alternatives considered:** Public `VoteCast` with UI-only hiding (weak); encrypted on-chain ballots (out of scope).
-- **References:** `architecture.mdc` §8, `event_schema.mdc` §5–7, `user_interface/elixir_ui.mdc`.
+  - Two transactions per voter; UX and wallet guidance required (`user_interface/voting_ui.mdc`).
+  - Ingestion and Aggregator implement `VoteCommitted` / `VoteRevealed` and remove **`VoteCast`** from active production paths in the same migration wave as the first target contract deploy.
+  - Transparency: commitments and reveals are publicly verifiable after reveal; determined chain analysts may observe reveals as they arrive — voter-facing channels still hide interim tallies until finalize.
+  - Phase 1 exit (per agreed direction): devnet **commit → reveal → finalize** → event bus → Aggregator projection, without a `VoteCast` contract.
+- **Test vectors (golden fixtures):** `smart-contract/tests/fixtures/golden-0003-vote-commitment-expected.json` — `proposal_id` `proposal-golden-001`, `option_id` `1`, fixed 32-byte salt, voter `11111111111111111111111111111112` → SHA-256 `18aa83a5965e6d0ca32bed2e75afcb95e9164166d147de0916eac91ca2c2cf41`, commitment base58 `2fHb8QiezB2CSfXhwtZ9WaJ81HCtGJhP5eXEbQCwcbuz`. Regenerate: `smart-contract/scripts/generate_golden_fixtures.py`.
+- **Alternatives considered:** Public `VoteCast` with UI-only hiding (rejected); encrypted on-chain ballots (out of scope); `results_visible` tied only to wall-clock without `ProposalFinalized` (rejected — weaker event correlation); Keccak256 commitment (rejected for v1 — SHA-256 sufficient and native on Solana).
+- **References:** `architecture.mdc` §8, `event_schema.mdc` §5–7, `user_interface/elixir_ui.mdc`, `docs/planning/agreed_direction_skip_votecast.md`.

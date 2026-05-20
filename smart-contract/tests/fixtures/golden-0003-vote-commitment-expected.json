@@ -1,0 +1,13 @@
+{
+  "role": "expected_output",
+  "adr": "0003-commit-reveal-voting",
+  "description": "Expected vote commitment for one fixed voter/input scenario per ADR 0003.",
+  "proposal_id": "proposal-golden-001",
+  "option_id": "1",
+  "salt_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+  "voter_pubkey_base58": "11111111111111111111111111111112",
+  "voter_pubkey_hex": "0000000000000000000000000000000000000000000000000000000000000001",
+  "concat_order": "proposal_id_utf8 || salt_32 || voter_pubkey_32 || option_id_utf8",
+  "sha256_hex": "18aa83a5965e6d0ca32bed2e75afcb95e9164166d147de0916eac91ca2c2cf41",
+  "commitment_base58": "2fHb8QiezB2CSfXhwtZ9WaJ81HCtGJhP5eXEbQCwcbuz"
+}

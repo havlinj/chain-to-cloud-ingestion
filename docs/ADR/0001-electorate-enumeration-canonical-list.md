@@ -1,16 +1,21 @@
 # Electorate enumeration (canonical off-chain list + list_hash)
 
-- **Status:** Proposed
+- **Status:** Accepted
+- **Non-goals:** On-chain full pubkey enumeration; mandatory IPFS `electorate_list_cid` in v1; using grant/revoke events alone without a canonical list and `list_hash`.
 - **Context:** The on-chain program stores only `merkle_root` and `version`, not every eligible `voter_pubkey`. Auditors and voters need to answer who exactly could vote on a proposal. Phase 3 requires transparency without trusting a private admin database alone.
-- **Decision:** *(To be finalized after maintainer discussion.)*
-  - Admin maintains a **canonical ordered pubkey list** (file or DB) off-chain.
-  - On each `update_merkle_root`, publish **`list_hash`** (e.g. SHA-256 of canonical serialized list) in `EligibleVotersRootUpdated` and/or alongside admin tooling output.
-  - Merkle tree is built from that list per ADR-defined leaf rule (e.g. `keccak256(pubkey_bytes)`).
-  - At `create_proposal`, snapshot fields (`electorate_merkle_root`, `electorate_registry_version`, `electorate_snapshot_slot`) are emitted; optional materialized member list deferred unless discussion chooses IPFS/CID or audit event.
-  - Grant/revoke PDAs remain the on-chain source for **individual** adds/removes relative to snapshot slot.
+- **Decision:**
+  - Admin maintains a **canonical ordered pubkey list** off-chain (file or DB).
+  - **Canonical serialization:** pubkeys as base58 strings, **lexicographically sorted**, one pubkey per line, Unix line feed (`\n`) between lines; no trailing newline after the last line unless the list is empty (empty file = empty list).
+  - **`list_hash`:** SHA-256 of the raw canonical file bytes. Published in `EligibleVotersRootUpdated` and in admin tooling output alongside the new `merkle_root`.
+  - **Merkle tree:** Built from the canonical list. **Leaf:** `keccak256(pubkey_bytes)` where `pubkey_bytes` is the 32-byte Ed25519 public key. **Internal nodes:** binary tree over sorted leaves; pair hash `keccak256(left_child_bytes ‖ right_child_bytes)` with children ordered so `left ≤ right` by hash bytes (document exact builder in admin tooling; tests must match on-chain verifier).
+  - **Electorate freeze at `create_proposal`:** Emit `electorate_merkle_root`, `electorate_registry_version`, `electorate_snapshot_slot` on the proposal and in `ProposalCreated`. Later registry mutations do not change this proposal’s electorate.
+  - **Grant/revoke PDAs** remain the on-chain source for **individual** adds/removes, evaluated relative to `electorate_snapshot_slot` per `architecture.mdc` §8.
+  - **Materialized full member list (IPFS CID or audit event) at `create_proposal`:** **Not required** in the first implementation wave. On-chain enforcement uses Merkle proof at `commit_vote` against the frozen root only. A future ADR may add optional `electorate_list_cid` (IPFS) for demo/audit convenience; that does not change freeze semantics.
 - **Consequences:**
-  - Third parties can verify list ↔ root off-chain.
-  - Full enumeration is not on-chain; reliance on published list + hash discipline.
-  - Ingestion and `event_schema.mdc` gain optional `list_hash` when Accepted.
-- **Alternatives considered:** On-chain enumeration of all pubkeys (costly); materialized snapshot at every `create_proposal` (heavier, clearer audit).
-- **References:** `architecture.mdc` §8, `event_schema.mdc` §6–8, `development_plan.mdc` §3.3.
+  - Third parties can verify list ↔ `list_hash` ↔ `merkle_root` off-chain.
+  - Full enumeration is not on-chain; transparency relies on published list discipline, `list_hash`, grant/revoke events, and snapshot fields on `ProposalCreated`.
+  - Ingestion and `event_schema.mdc` may include optional `list_hash` on `EligibleVotersRootUpdated`; optional `electorate_list_cid` only when a future ADR adopts IPFS materialization.
+  - Admin tooling must implement the same canonical list and Merkle builder as the program verifier.
+- **Test vectors (golden fixtures):** input `smart-contract/tests/fixtures/golden-0001-voter-list-input.txt`; expected `golden-0001-list-hash-and-merkle-expected.json` — `list_hash` `b76212dde92711525d8184430351c3536b8579c853113994b5e22cccfd8aa1dd`, Merkle root (keccak) `28ba380b3c6003d6d833999c98d92f7976556bd64d4101054d164a1e8deefe92` / base58 `3jz13vUQLAiWzwsYXCgVVJm7yTWtgWAuUSu1UDpXT1tu`. Regenerate: `smart-contract/scripts/generate_golden_fixtures.py`.
+- **Alternatives considered:** On-chain enumeration of all pubkeys (costly); mandatory IPFS/materialized snapshot at every `create_proposal` (deferred — clearer audit, higher ops scope); reliance on grant/revoke events alone without canonical list (weak verification of full electorate).
+- **References:** `architecture.mdc` §8, `event_schema.mdc` §6–8, `development_plan.mdc` §3.3, `docs/planning/agreed_direction_skip_votecast.md`.
