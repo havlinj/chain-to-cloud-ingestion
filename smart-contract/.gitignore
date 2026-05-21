@@ -1,3 +1,5 @@
 .venv-fixtures/
 .venv-golden/
 target/
+**/.anchor/
+test-ledger/
