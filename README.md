@@ -1,8 +1,18 @@
-# Chain-to-Cloud Ingestion
+# Chain-to-Cloud Governance & Voting
+
+*On-chain policy. Off-chain projections.*
+
+A Solana program enforces **commit–reveal** voting and, in later phases, **who may vote**. Each transition emits an event: Ingestion captures it on AWS, the bus fans out to independent consumers, and the Forwarder carries the same stream into analytics on GCP. Phoenix LiveView reads the operational view over gRPC; the wallet signs `commit_vote` and `reveal_vote` on-chain. Voters do not see live tallies until the program and Aggregator agree the vote is finished.
+
+The repository is an **exploratory, hands-on build**—not a set of isolated technology demos. One product spans blockchain, event-driven services, AWS and GCP, Terraform, observability, and UI, with production-oriented practices: bounded services, ADRs, idempotent handlers, structured logs, least-privilege IAM. The directory remains *chain-to-cloud-ingestion* from the first milestone; the **system** now covers the program, projections, dashboards, and the full voter flow.
+
+The hard part—and the point—is **keeping every layer consistent**: the same commitment formula, phase windows, and eligibility snapshot on-chain, in normalized events, in DynamoDB, and in what the UI may show.
+
+---
 
 ## Purpose and Scope
 
-This is an **exploratory, experimental, learning-focused project**. The goal is to combine a chosen set of technologies and apply them in a single use case that is rigorous enough to stand as a real system—using solid development practices, clear boundaries, and production-style operational thinking. The project is explicitly designed to train exposure to and practice with the following:
+Stack components are integrated into the voting pipeline, not maintained as separate exercises:
 
 - **Agentic AI development workflow** — Cursor-driven, approval-based iteration; rules in `.cursor/rules/` steer the AI agent toward small steps, explicit confirmation, and documented progress.
 - **Cloud services** — **AWS** (operational path: Lambda, SQS, SNS, DynamoDB, API Gateway, CloudWatch) and **GCP** (analytics path: Pub/Sub, Cloud Run, BigQuery, Cloud Monitoring).
@@ -15,31 +25,51 @@ This is an **exploratory, experimental, learning-focused project**. The goal is 
 - **Go** — Primary language for Aggregator and Analytics services; clean layering (handlers, service, domain, repository), idiomatic Go, and strict idempotency in event handlers.
 - **TypeScript** — Ingestion service on AWS Lambda (Node.js 20); thin blockchain-to-SNS adapter with normalized event envelopes; Vitest for unit tests.
 - **Elixir UI** — **Phoenix LiveView** application in `user_interface/` acting as a client of the backend; consumes **gRPC** read/streaming APIs from Aggregator (and optionally Analytics); no participation in the event bus.
-- **gRPC API** — Read and query APIs exposed by the Go services (e.g. ListProposals, GetProposal, WatchProposals, StreamProposalVotes, GetVoterActivity, and analytics trends); contract for the Governance & Voting UI; exposed via API Gateway or gRPC-Web proxy as needed.
-
-All of the above were intentionally brought into the project to practice them in a coherent, senior-level architecture.
+- **gRPC API** — Read and query APIs exposed by the Go services (e.g. ListProposals, GetProposal, WatchProposals, StreamProposalVotes, GetVoterParticipation, and analytics trends); contract for the Governance & Voting UI; exposed via API Gateway or gRPC-Web proxy as needed.
 
 ---
 
-## One-Sentence Overview
+## System at a Glance
 
-A **multi-cloud, event-driven system** in which a blockchain voting smart contract emits events that are ingested into AWS serverless infrastructure, distributed through an event bus, and processed by independent microservices across AWS and GCP using a **CQRS** architecture.
+| Layer | Role |
+|-------|------|
+| **Solana program** | Commit–reveal voting, phase deadlines, eligibility (Phase 3); emits structured events |
+| **Ingestion → event bus** | Chain → normalized JSON → SNS/SQS fan-out (thin adapter, no domain logic) |
+| **Operational path (AWS)** | Aggregator → DynamoDB → gRPC (ballot, phases, participation, results when allowed) |
+| **Analytical path (GCP)** | Forwarder → Pub/Sub → Analytics → BigQuery (history, trends, audit) |
+| **UI + wallet** | LiveView reads gRPC; wallet writes commits and reveals on-chain |
+
+---
+
+## How the Scope Evolved
+
+Documented in `docs/ADR/`, `docs/planning/`, and `.cursor/rules/` as the design matured:
+
+| Stage | Direction |
+|-------|-----------|
+| **Early MVP** | Prove AWS path: chain → Ingestion → SNS/SQS → Aggregator; optional legacy **`VoteCast`** in handlers for pipeline tests. |
+| **Governance model** | **Commit–reveal** (ADR 0003): no public choice on-chain during commit; tally from **`VoteRevealed`** only; UI hides counts until finalize. |
+| **Eligibility (Phase 3)** | Global Merkle registry, grant/revoke, electorate snapshot on **`ProposalCreated`** (ADRs 0001, 0002)—not “any wallet on devnet” as the real program. |
+| **Agreed shortcut (2026)** | **No throwaway VoteCast contract**; first on-chain product uses the target model; Ingestion/Aggregator migrate in one wave when the Anchor program lands. See [`docs/planning/agreed_direction_skip_votecast.md`](docs/planning/agreed_direction_skip_votecast.md). |
+| **In progress** | `smart-contract/` workspace (crypto + Anchor scaffold); AWS services retain iteration-1 paths until the migration PR. |
+
+Delivery phases are in `.cursor/rules/development_plan.mdc`. The table below records product decisions, not a parallel roadmap.
 
 ---
 
 ## Goals
 
-The project is designed to demonstrate **senior-level cloud architecture skills**:
+With commit–reveal and the layer map defined, the central engineering task is **consistent rules across layers**—the same commitment hash, phase windows, and eligibility on-chain, in normalized events, in DynamoDB, and in gRPC.
 
-- **Blockchain as immutable event source** — On-chain state changes become the single source of truth; off-chain systems react via events only.
-- **Event-driven design** — Decoupling, resilience, scalability, and (with Kafka) replayability.
-- **Microservices with clear boundaries** — Each service has defined responsibilities and its own data store; no cross-service DB access or synchronous RPC.
-- **Multi-cloud** — AWS for operational workloads (ingestion, aggregation, DynamoDB); GCP for analytics (BigQuery, derived tables). Forwarder bridges events from AWS to GCP.
-- **Production-usable governance (Phase 3)** — Global **Merkle allowlist** on-chain so random wallets cannot vote; admin can **grant** or **revoke** eligibility without relying on off-chain checks alone.
-- **Observability-first** — Structured logging, correlation IDs, metrics, and Grafana dashboards.
-- **Infrastructure as Code** — Terraform, GitHub Actions, and production-style operational mindset.
+- **Blockchain as product surface** — Event shapes, phases, and eligibility are fixed in ADRs and verified (golden fixtures, devnet) before downstream services depend on them.
+- **Event-driven boundaries** — Loose coupling, replay-friendly seams, idempotent consumers under at-least-once delivery.
+- **Service ownership** — Each backend owns its store; no cross-service DB access or synchronous RPC.
+- **Multi-cloud CQRS** — AWS for operational reads; GCP for history and trends; Forwarder is transport only.
+- **Governance semantics** — Commit–reveal, frozen electorate per proposal, auditable eligibility changes—not an open `vote(option_id)` program on devnet.
+- **Operability** — Structured logs, correlation fields, metrics, DLQs, Grafana across clouds.
+- **IaC and CI** — Terraform, GitHub Actions, OIDC where possible.
 
-The system is intended to feel like a **realistic cloud-native system**, not a toy demo.
+Scope is **substantial but bounded**: enough components to exercise integration and operations, without targeting national-election scale.
 
 ---
 
@@ -47,9 +77,9 @@ The system is intended to feel like a **realistic cloud-native system**, not a t
 
 | Phase | Focus |
 |-------|--------|
-| **1** | AWS operational pipeline: contract (basic), Ingestion, SNS/SQS, Aggregator, DynamoDB, gRPC API |
+| **1** | AWS operational pipeline: **Anchor program (commit–reveal)** in `smart-contract/`, Ingestion, SNS/SQS fan-out, Aggregator, DynamoDB, gRPC API; exit = devnet **commit → reveal → finalize** → bus → projection (no VoteCast placeholder contract) |
 | **2** | GCP analytics: Forwarder, Pub/Sub, BigQuery, **UI first slice** (LiveView + Aggregator gRPC) |
-| **3** | **Commit–reveal voting** + Merkle allowlist; frozen electorate; voter UI read model |
+| **3** | **Eligibility on-chain** (Merkle allowlist, grant/revoke, frozen electorate, audit events); voter UI read model fully aligned with phase/`results_visible` rules |
 | **4** | Kafka (optional), **UI full slice** (streaming, trends), Grafana, E2E, production hardening |
 | **5** | **Playground:** primitive voting UI + simulation orchestrator |
 
@@ -59,51 +89,55 @@ Details: `.cursor/rules/development_plan.mdc`.
 
 ## High-Level Architecture
 
-**Mental model:** *Blockchain → Event stream → Projections.*
+**Mental model:** *Blockchain → event stream → projections.*
 
-1. **Smart contract** (Solana, Rust/Anchor) — **Commit–reveal** voting (`commit_vote`, `reveal_vote`); global eligibility (Phase 3); emits `VoteCommitted`, `VoteRevealed`, proposal lifecycle and eligibility events.
-2. **Ingestion** (TypeScript, AWS Lambda) — Connects to chain RPC, normalizes events, publishes to SNS. No business logic; strictly an adapter from blockchain to bus.
-3. **Event bus (fan-out)** — One SNS topic (or two SQS queues) so that **Aggregator** and **Forwarder** both receive every event.
-4. **Aggregator** (Go, AWS) — Consumes from SQS, maintains the **operational projection** in DynamoDB (proposals, vote counts, voter activity). Exposes **gRPC read API** for the UI.
-5. **Forwarder** (AWS Lambda) — Consumes from SQS, forwards events to **GCP Pub/Sub**. Stateless bridge only.
-6. **Analytics** (Go, GCP Cloud Run) — Consumes from Pub/Sub, writes raw events to BigQuery, builds analytical tables; optionally exposes gRPC query API for trends.
-7. **User interface** — Phoenix LiveView: **reads** Aggregator gRPC (ballot, participation, countdown, results after finalize); **writes** votes via wallet to Solana (`commit` + `reveal`). No interim result tallies for voters during voting.
+Layer map: **System at a Glance**. Architectural constraints:
 
-**Data ownership:** Aggregator owns DynamoDB; Analytics owns BigQuery. No service reads or writes another service’s store. Communication is **event-only**; the UI is a gRPC client.
+- **Fan-out** — One SNS topic (or two SQS queues) so **Aggregator** and **Forwarder** both receive every event.
+- **Thin adapters** — Ingestion and Forwarder capture or forward only; no domain logic in the path.
+- **Contract + crypto** — Rust/Anchor program; ADRs **0001–0003** accepted; shared helpers and golden tests under `smart-contract/`.
+- **Operational read model** — Aggregator projects DynamoDB from events; counts from **`VoteRevealed`** only; gRPC exposes `option_counts` when `results_visible`.
+- **UI split** — LiveView reads gRPC; wallet submits commits and reveals on Solana. No interim tallies for voters.
 
-**Idempotency:** Delivery is at-least-once (SQS, Pub/Sub). Every event consumer must be idempotent (e.g. event_id deduplication, upserts).
+**Data ownership:** Aggregator → DynamoDB; Analytics → BigQuery. Backends communicate by events only; the UI is a gRPC client plus wallet.
+
+**Idempotency:** SQS and Pub/Sub provide at-least-once delivery; consumers deduplicate on `event_id` (or equivalent) and upsert.
 
 ---
 
 ## Voting Model (commit–reveal)
 
-- **Commit phase** — Voters submit a hash commitment; **choice is not on-chain**.
-- **Reveal phase** — Voters submit `option_id` + salt; program verifies and tallies.
-- **Results** — Shown in UI only after reveal ends (`results_visible` from Aggregator). No live Yes/No board for voters during voting (reduces bandwagon effect; chain analysts can still inspect commitments).
+| Phase | On-chain | Voter-facing UI |
+|-------|----------|-----------------|
+| **Commit** | `commitment = hash(option ‖ salt ‖ voter ‖ proposal)` — **no `option_id` on chain** | Participation only; no choice visible |
+| **Reveal** | `option_id` + salt verified; **`VoteRevealed`** emitted | Still no live Yes/No board for voters |
+| **Finalized** | Tally fixed | **`option_counts`** when Aggregator sets `results_visible` |
 
-Aggregator iteration 1 may still process legacy **`VoteCast`** for pipeline tests; production target is **`VoteCommitted`** / **`VoteRevealed`**.
+- **Transparency** — Rules and commitments are public; anyone can verify reveals against commits afterward. It does **not** mean live scoreboards during voting.
+- **Salt** — Voter-chosen, held off-chain until reveal; voting requires two on-chain transactions (commit, then reveal).
+- **Legacy `VoteCast`** — Deprecated. Some AWS iteration-1 code may still handle it for pipeline tests; not the target program. Migration: [`docs/planning/agreed_direction_skip_votecast.md`](docs/planning/agreed_direction_skip_votecast.md).
 
-## Voter UI (same app: gRPC + wallet)
+### Voter UI (gRPC + wallet)
 
 | Need | Source |
 |------|--------|
 | What is being voted on | Aggregator — title, options |
-| Whether the user voted | Aggregator — `has_committed`, `has_revealed`; wallet — commit/reveal txs |
+| Whether the voter participated | Aggregator — `has_committed`, `has_revealed`; wallet — commit/reveal txs |
 | Time until phase ends | Aggregator — `commit_ends_at` / `reveal_ends_at`, `phase` |
 | Results | Aggregator — `option_counts` when `results_visible` |
 
 Details: **`.cursor/rules/user_interface/elixir_ui.mdc`**.
 
-## Eligibility and transparency (Phase 3)
+### Eligibility and transparency (Phase 3)
 
-Global Merkle allowlist, frozen electorate per proposal, one active proposal, immutable eligibility audit events. See **architecture.mdc** §8, **event_schema.mdc**, **docs/ADR/** (`0001`, `0002`, `0003`).
+Global Merkle allowlist; electorate **frozen per proposal** at `ProposalCreated`; one active proposal at a time; append-only eligibility events (`EligibleVotersRootUpdated`, grant/revoke). Canonical off-chain list + `list_hash` per ADR 0001. Details: **architecture.mdc** (voter eligibility), **event_schema.mdc**, **`docs/ADR/`** (0001–0003).
 
 ---
 
 ## Repository Structure
 
 ```
-smart-contract/          # Solana program (Rust/Anchor)
+smart-contract/          # Solana program (Rust/Anchor) + voting-crypto crate
 services/
   ingestion/             # TypeScript, AWS Lambda — chain → SNS
   aggregator/            # Go — SQS → DynamoDB, gRPC API
@@ -118,8 +152,9 @@ grafana/
   dashboards/
 docs/
   ADR/
-  diagrams/
+  planning/
   progress/
+  diagrams/
 .github/workflows/
 .cursor/rules/           # Architecture, boundaries, style, testing, agent workflow
 ```
@@ -128,7 +163,11 @@ docs/
 
 ## Event Schema
 
-Events use a **canonical envelope**: `event_id`, `event_type`, `timestamp`, `source`, `version`. Payloads are JSON. Solana uses **slot** (not block number). Schema evolution is backward-compatible only (add fields, never remove or change meaning). See `.cursor/rules/event_schema.mdc` and `architecture.mdc` §9 for full details.
+Events use a **canonical envelope**: `event_id`, `event_type`, `timestamp`, `source`, `version`. Payloads are JSON. Solana uses **slot** (not block number).
+
+**Primary voting events:** `VoteCommitted`, `VoteRevealed`, `ProposalCreated` (with phase deadlines and electorate snapshot fields), `ProposalClosed`, `ProposalFinalized`, plus eligibility events in Phase 3. **`VoteCast`** is deprecated.
+
+Schema evolution is additive only (new fields OK; no breaking renames). See `.cursor/rules/event_schema.mdc` and `architecture.mdc` (event schema).
 
 ---
 
@@ -136,19 +175,17 @@ Events use a **canonical envelope**: `event_id`, `event_type`, `timestamp`, `sou
 
 | Area            | Choice |
 |----------------|--------|
-| Blockchain     | Solana (Rust, Anchor) |
+| Blockchain     | Solana (Rust, Anchor); commit–reveal + Merkle eligibility (ADRs 0001–0003) |
 | Ingestion      | TypeScript, AWS Lambda (Node.js 20) |
 | Event bus (MVP)| AWS SNS + SQS (fan-out) |
 | Event bus (opt)| Kafka (Phase 4) |
 | Operational DB | DynamoDB |
 | Analytics store| BigQuery |
 | Backend APIs   | gRPC (Go — Aggregator, Analytics) |
-| UI             | Elixir, Phoenix, LiveView |
+| UI             | Elixir, Phoenix, LiveView + wallet (commit/reveal txs) |
 | Infra          | Terraform (AWS + GCP) |
 | CI/CD          | GitHub Actions (OIDC preferred) |
 | Observability  | Grafana, CloudWatch, GCP Monitoring |
-| Voting model | Commit–reveal on-chain; results in UI after finalize |
-| Voter eligibility | Global Merkle allowlist + grant/revoke (Phase 3) |
 
 ---
 
@@ -156,19 +193,23 @@ Events use a **canonical envelope**: `event_id`, `event_type`, `timestamp`, `sou
 
 - **Architecture and event bus:** `.cursor/rules/architecture.mdc`, `.cursor/rules/service_boundaries.mdc`, `.cursor/rules/system_context.mdc`
 - **Development phases:** `.cursor/rules/development_plan.mdc`
+- **Active direction:** [`docs/planning/agreed_direction_skip_votecast.md`](docs/planning/agreed_direction_skip_votecast.md)
+- **Decisions:** [`docs/ADR/README.md`](docs/ADR/README.md)
 - **Event schema:** `.cursor/rules/event_schema.mdc`
 - **Coding and service style:** `.cursor/rules/coding_style.mdc`, `.cursor/rules/service_style.mdc`
 - **Agent workflow:** `.cursor/rules/agent/agent_workflow.mdc`
 - **Testing:** `.cursor/rules/testing/` (general, Go, TypeScript/Ingestion, e2e, event-driven, smart contract, infra)
 - **UI (Elixir/LiveView):** `.cursor/rules/user_interface/elixir_ui.mdc`
 - **Primitive voting UI (Phase 5):** `.cursor/rules/user_interface/voting_ui.mdc`
+- **Smart contract (local):** [`smart-contract/README.md`](smart-contract/README.md)
+- **Documentation layout:** [`docs/README.md`](docs/README.md)
 
 ---
 
 ## Non-Goals
 
-To keep scope achievable: no complex frontends, enterprise compliance frameworks, full data lake/ML pipelines, or **government-grade KYC** on-chain. **Sybil resistance** for a defined electorate is in scope via **admin-managed allowlist** (Phase 3), not proof-of-personhood for the entire internet.
+Out of scope: polished marketing frontends, enterprise compliance frameworks, full data-lake/ML platforms, or **government-grade KYC** on-chain. **Sybil resistance** applies to a **defined electorate** via an admin-managed allowlist (Phase 3), not open-network proof-of-personhood.
 
 ---
 
-*This README reflects the authoritative architecture and conventions defined in `.cursor/rules/`. For documentation layout (ADR, planning, progress), see [`docs/README.md`](docs/README.md).*
+*Overview of `.cursor/rules/` and `docs/`. During migration, if this README is out of date, **Accepted ADRs** and **`docs/planning/`** are authoritative.*
