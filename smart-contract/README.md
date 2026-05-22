@@ -2,12 +2,12 @@
 
 Solana **Anchor** program for commit–reveal voting and Merkle voter registry (ADR 0001–0003). Off-chain pipeline: Ingestion → SNS/SQS → Aggregator.
 
-## Layout (iteration 2A)
+## Layout
 
 | Path | Role |
 |------|------|
-| `crates/voting-crypto/` | Pure Rust: `list_hash`, Merkle tree, vote commitment, base58 — **golden tests run here** |
-| `programs/voting/` | Anchor program shell; will call `voting-crypto` from instructions (2B) |
+| `crates/voting-crypto/` | Pure Rust: `list_hash`, Merkle tree, vote commitment, base58 — **golden tests** |
+| `programs/voting/` | Anchor program: registry, proposals, commit/reveal, events (iteration **2B**) |
 | `tests/fixtures/` | ADR golden JSON/txt (regenerate via `scripts/generate_golden_fixtures.py`) |
 | `Anchor.toml` | Anchor workspace config (devnet/localnet program id) |
 
@@ -18,7 +18,31 @@ cd smart-contract
 cargo test -p voting-crypto
 ```
 
-Building the Anchor program needs Rust **1.78+**, Anchor **0.30.1**, and Solana CLI — see [Anchor install](https://www.anchor-lang.com/docs/installation). CI runs `cargo test -p voting-crypto` only (see `.github/workflows/smart-contract.yml`); full `anchor build` is iteration **2B**.
+## Build Anchor program (iteration 2B)
+
+Requires Rust **stable** (1.85+ Cargo) for `anchor-lang` transitive deps, plus [Anchor 0.30.1](https://www.anchor-lang.com/docs/installation) and Solana CLI for `anchor build`:
+
+```bash
+cd smart-contract
+rustup run stable cargo build -p voting
+# optional: anchor build
+```
+
+CI runs `cargo test -p voting-crypto` on Rust 1.78 and `cargo build -p voting` on stable (see `.github/workflows/smart-contract.yml`).
+
+## Instructions (program API)
+
+| Instruction | Purpose |
+|-------------|---------|
+| `initialize_registry` | Create `VoterRegistry` + `ProgramConfig` |
+| `transfer_authority` | ADR 0002: move registry authority |
+| `update_merkle_root` | Bump registry version; emit `EligibleVotersRootUpdated` |
+| `grant_eligibility` / `revoke_eligibility` | Living registry PDAs + events |
+| `create_proposal` | Snapshot electorate; one active proposal at a time |
+| `commit_vote` | Phase `commit`; Merkle proof and/or grant PDA |
+| `reveal_vote` | After `commit_ends_at`; verifies SHA-256 commitment |
+| `close_proposal` | Authority early close |
+| `finalize_proposal` | After `reveal_ends_at`; emit `ProposalFinalized` |
 
 ## Regenerate fixtures
 

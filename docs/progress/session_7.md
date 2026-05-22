@@ -54,7 +54,7 @@ README: editorial pass only; authoritative specs remain `.cursor/rules/`, Accept
 
 ## Next Steps
 
-1. **2B:** Anchor accounts + instructions (registry, `create_proposal`, commit/reveal/finalize, events).
+1. ~~**2B:** Anchor accounts + instructions~~ — done in [`session_8.md`](session_8.md).
 2. Optional: additional golden fixtures (1 voter, 4 voters) before on-chain verifier.
 3. Anchor integration / devnet tests using same fixtures.
 4. Ingestion + Aggregator migration (remove `VoteCast`) after first contract deploy.

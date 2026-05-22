@@ -1,3 +1,4 @@
 [toolchain]
+# voting-crypto: 1.78+ is enough. `cargo build -p voting` (Anchor) needs stable / 1.85+ for transitive crates.
 channel = "1.78.0"
 components = ["rustfmt", "clippy"]

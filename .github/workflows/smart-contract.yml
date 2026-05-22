@@ -1,5 +1,5 @@
-# voting-crypto: golden fixture tests (ADR 0001 / 0003 algorithms).
-# Anchor program build is deferred to iteration 2B (requires Anchor + Solana CLI).
+# voting-crypto: golden fixture tests (ADR 0001 / 0003).
+# voting program: host build via stable Rust (anchor-lang); anchor build/SBF optional locally.
 
 name: Smart contract
 
@@ -35,3 +35,20 @@ jobs:
 
       - name: Cargo test (voting-crypto)
         run: cargo test -p voting-crypto
+
+  voting-program:
+    name: voting program (host build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: smart-contract
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo build (voting)
+        run: cargo build -p voting
