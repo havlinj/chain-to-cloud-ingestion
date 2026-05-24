@@ -4,7 +4,7 @@ use crate::constants::{MAX_OPTION_LEN, MAX_OPTIONS, MAX_PROPOSAL_ID_LEN, MAX_TIT
 use crate::errors::VotingError;
 use crate::events::{ProposalClosed, ProposalCreated, ProposalFinalized};
 use crate::state::{
-    CloseProposal, CreateProposal, FinalizeProposal, Proposal, ProposalPhase, ProgramConfig,
+    CloseProposal, CreateProposal, FinalizeProposal, ProposalPhase, ProgramConfig,
 };
 
 fn validate_proposal_id(proposal_id: &str) -> Result<()> {

@@ -14,7 +14,7 @@ Solana **Anchor** program for commit–reveal voting and Merkle voter registry (
 
 ## Run all tests (one script)
 
-From `smart-contract/` (needs Solana 3.1.x + Anchor 0.31.1 on `PATH`; see below):
+From `smart-contract/` (needs Solana 3.1.x + Anchor 0.32.1 on `PATH`; see below):
 
 ```bash
 cd smart-contract
@@ -35,7 +35,7 @@ cargo test -p voting-crypto
 
 ## Build Anchor program (iteration 2B)
 
-Requires Rust **stable**, **Anchor 0.31.1**, and **Solana 3.1.x** (see toolchain note above):
+Requires Rust **stable**, **Anchor 0.32.1**, and **Solana 3.1.x** (see toolchain note above):
 
 ```bash
 cd smart-contract
@@ -47,22 +47,22 @@ CI runs `cargo test -p voting-crypto` on Rust 1.78 and `cargo build -p voting` o
 
 ## Anchor integration tests (iteration 2C)
 
-Requires **Anchor 0.31.1**, **Solana CLI 3.1.x** (platform-tools rustc ≥ 1.85 — needed for current `crates.io` deps), Rust **stable**, Node.js 20+, and a default wallet at `~/.config/solana/id.json`.
+Requires **Anchor 0.32.1**, **Solana CLI 3.1.x** (platform-tools rustc ≥ 1.85 — needed for current `crates.io` deps), Rust **stable**, Node.js 20+, and a default wallet at `~/.config/solana/id.json`.
 
-`Anchor.toml` pins `[toolchain] anchor_version = "0.31.1"` and `solana_version = "3.1.15"`. Anchor **0.30.1 + Solana 1.18** fails on modern hosts (edition2024 / `anchor-syn` / BPF heap).
+`Anchor.toml` pins `[toolchain] anchor_version = "0.32.1"` and `solana_version = "3.1.15"`. Anchor **0.30.1 + Solana 1.18** fails on modern hosts (edition2024 / `anchor-syn` / BPF heap).
 
 ```bash
 # ~/.bashrc (after avm + solana install)
 export PATH="$HOME/.local/share/solana/install/active_release/bin:$HOME/.avm/bin:$PATH"
-avm use 0.31.1
-# If `anchor --version` still shows 0.30.1, call the versioned binary:
-#   ~/.avm/bin/anchor-0.31.1 test
+avm use 0.32.1
+# If `anchor --version` still shows an older release, call the versioned binary:
+#   ~/.avm/bin/anchor-0.32.1 test
 
 solana-keygen new --outfile ~/.config/solana/id.json --no-bip39-passphrase --force  # once
 
 cd smart-contract
 npm install
-anchor test   # or: ~/.avm/bin/anchor-0.31.1 test
+anchor test   # or: ~/.avm/bin/anchor-0.32.1 test
 ```
 
 Offline check (golden crypto only, no validator):

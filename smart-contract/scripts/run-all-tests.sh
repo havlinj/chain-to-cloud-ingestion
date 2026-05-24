@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run all smart-contract tests: voting-crypto (Rust), host build, Anchor integration (local validator).
 #
-# Prerequisites: Rust stable, Node.js 20+, Solana CLI 3.1.x, Anchor 0.31.1 (avm), npm deps.
+# Prerequisites: Rust stable, Node.js 20+, Solana CLI 3.1.x, Anchor 0.32.1 (avm), npm deps.
 # See smart-contract/README.md for install notes.
 #
 # Usage (from repo root or smart-contract/):
@@ -27,20 +27,20 @@ need_cmd() {
 }
 
 resolve_anchor() {
-  if command -v anchor-0.31.1 >/dev/null 2>&1; then
-    echo "anchor-0.31.1"
+  if command -v anchor-0.32.1 >/dev/null 2>&1; then
+    echo "anchor-0.32.1"
     return
   fi
   if command -v anchor >/dev/null 2>&1; then
     local ver
     ver="$(anchor --version 2>/dev/null || true)"
-    if [[ "$ver" == *"0.31.1"* ]]; then
+    if [[ "$ver" == *"0.32.1"* ]]; then
       echo "anchor"
       return
     fi
-    die "anchor found but not 0.31.1 ($ver). Run: avm install 0.31.1 && avm use 0.31.1"
+    die "anchor found but not 0.32.1 ($ver). Run: avm install 0.32.1 && avm use 0.32.1"
   fi
-  die "Anchor 0.31.1 not found. Install avm, then: avm install 0.31.1 && avm use 0.31.1"
+  die "Anchor 0.32.1 not found. Install avm, then: avm install 0.32.1 && avm use 0.32.1"
 }
 
 ensure_wallet() {

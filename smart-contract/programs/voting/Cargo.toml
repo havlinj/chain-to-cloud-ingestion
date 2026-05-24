@@ -16,7 +16,11 @@ no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
 idl-build = ["anchor-lang/idl-build"]
+# Declared for Anchor macro-expanded cfgs (avoids `unexpected_cfgs` on Rust 1.80+).
+custom-heap = []
+custom-panic = []
+anchor-debug = []
 
 [dependencies]
-anchor-lang = "0.31.1"
+anchor-lang = "0.32.1"
 voting-crypto = { path = "../../crates/voting-crypto" }
