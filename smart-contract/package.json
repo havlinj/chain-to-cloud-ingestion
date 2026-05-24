@@ -3,7 +3,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "test": "ts-mocha -p ./tsconfig.json -t 1000000 tests/voting.ts"
+    "test": "ts-mocha -p ./tsconfig.json -t 1000000 tests/voting.ts tests/voting-coverage.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.32.1",

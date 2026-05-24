@@ -1,7 +1,7 @@
 [toolchain]
 anchor_version = "0.32.1"
-# Needs platform-tools with cargo that understands edition2024 (Solana 3.x → platform-tools v1.52+).
-solana_version = "3.1.15"
+# Solana 3.x (platform-tools v1.52+, edition2024). Pin active_release to Agave 3.1.15 locally;
+# `agave-install init 3.1.15` may report "Unknown release" — use the stable-* release dir instead.
 
 [features]
 resolution = true

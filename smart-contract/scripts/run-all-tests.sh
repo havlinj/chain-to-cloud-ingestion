@@ -14,8 +14,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# Avoid inheriting a sandbox CARGO_TARGET_DIR from the IDE.
-unset CARGO_TARGET_DIR || true
+# Avoid inheriting a sandbox CARGO_TARGET_DIR from the IDE; pin deploy artifacts here.
+export CARGO_TARGET_DIR="${ROOT}/target"
+mkdir -p "$CARGO_TARGET_DIR"
 
 export PATH="${HOME}/.local/share/solana/install/active_release/bin:${HOME}/.avm/bin:${PATH}"
 

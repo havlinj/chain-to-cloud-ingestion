@@ -48,6 +48,7 @@ export async function setMerkleRoot(
       authority: authority.publicKey,
       registry,
     })
+    .signers([authority])
     .rpc();
 }
 
