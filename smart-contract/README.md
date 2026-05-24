@@ -12,6 +12,20 @@ Solana **Anchor** program for commit–reveal voting and Merkle voter registry (
 | `tests/fixtures/` | ADR golden JSON/txt (regenerate via `scripts/generate_golden_fixtures.py`) |
 | `Anchor.toml` | Anchor workspace config (devnet/localnet program id) |
 
+## Run all tests (one script)
+
+From `smart-contract/` (needs Solana 3.1.x + Anchor 0.31.1 on `PATH`; see below):
+
+```bash
+cd smart-contract
+./scripts/run-all-tests.sh
+```
+
+Runs in order: `cargo test -p voting-crypto` (Rust 1.78, same as CI) → `cargo build -p voting` (stable) → `anchor test` (TypeScript + local validator). Options:
+
+- `SKIP_ANCHOR=1` — Rust only, no validator
+- `SKIP_HOST_BUILD=1` — skip host `cargo build`
+
 ## Quick test (no Anchor required)
 
 ```bash
