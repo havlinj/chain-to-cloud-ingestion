@@ -1,0 +1,23 @@
+{
+  "name": "voting-smart-contract-tests",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "ts-mocha -p ./tsconfig.json -t 1000000 tests/voting.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "0.31.1",
+    "@noble/hashes": "1.4.0",
+    "@solana/web3.js": "1.95.4",
+    "bn.js": "5.2.1"
+  },
+  "devDependencies": {
+    "@types/bn.js": "5.1.6",
+    "@types/chai": "4.3.20",
+    "@types/mocha": "10.0.9",
+    "chai": "4.5.0",
+    "mocha": "10.7.3",
+    "ts-mocha": "10.0.0",
+    "typescript": "5.6.3"
+  }
+}

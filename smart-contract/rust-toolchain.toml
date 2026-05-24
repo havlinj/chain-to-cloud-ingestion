@@ -1,4 +1,5 @@
 [toolchain]
-# voting-crypto: 1.78+ is enough. `cargo build -p voting` (Anchor) needs stable / 1.85+ for transitive crates.
-channel = "1.78.0"
+# Anchor / `cargo build-sbf` need stable (edition2024 in anchor-lang deps).
+# CI still pins 1.78 explicitly for `cargo test -p voting-crypto` (see smart-contract.yml).
+channel = "stable"
 components = ["rustfmt", "clippy"]

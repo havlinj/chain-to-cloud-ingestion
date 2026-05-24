@@ -220,7 +220,7 @@ pub struct RevokeEligibility<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(proposal_id: String, options: Vec<String>)]
+#[instruction(proposal_id: String, title: String, options: Vec<String>)]
 pub struct CreateProposal<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,

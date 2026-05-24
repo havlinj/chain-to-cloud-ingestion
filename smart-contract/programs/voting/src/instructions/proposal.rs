@@ -65,25 +65,25 @@ pub fn create_proposal(
     let slot = Clock::get()?.slot;
 
     let proposal = &mut ctx.accounts.proposal;
-    proposal.proposal_id = proposal_id.clone();
-    proposal.title = title.clone();
-    proposal.options = options.clone();
+    proposal.proposal_id = proposal_id;
+    proposal.title = title;
+    proposal.options = options;
     proposal.commit_ends_at = commit_ends_at;
     proposal.reveal_ends_at = reveal_ends_at;
     proposal.phase = ProposalPhase::Commit;
     proposal.electorate_merkle_root = registry.merkle_root;
     proposal.electorate_registry_version = registry.version;
     proposal.electorate_snapshot_slot = slot;
-    proposal.option_counts = vec![0; options.len()];
+    proposal.option_counts = vec![0u64; proposal.options.len()];
     proposal.bump = ctx.bumps.proposal;
 
     let config = &mut ctx.accounts.config;
     config.active_proposal = Some(proposal.key());
 
     emit!(ProposalCreated {
-        proposal_id,
-        title,
-        options,
+        proposal_id: proposal.proposal_id.clone(),
+        title: proposal.title.clone(),
+        options: proposal.options.clone(),
         commit_ends_at,
         reveal_ends_at,
         phase: ProposalPhase::Commit.as_str().to_string(),
