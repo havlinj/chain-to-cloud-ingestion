@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 
+use crate::eligibility_pda::{init_granted_voter, init_revoked_voter};
 use crate::events::{EligibleVotersRootUpdated, VoterEligibilityGranted, VoterEligibilityRevoked};
 use crate::state::{
     GrantEligibility, InitializeRegistry, RevokeEligibility, TransferAuthority, UpdateMerkleRoot,
@@ -49,10 +50,14 @@ pub fn update_merkle_root(
 }
 
 pub fn grant_eligibility(ctx: Context<GrantEligibility>) -> Result<()> {
-    let granted = &mut ctx.accounts.granted;
-    granted.voter = ctx.accounts.voter.key();
-    granted.granted_at_slot = Clock::get()?.slot;
-    granted.bump = ctx.bumps.granted;
+    let voter = ctx.accounts.voter.key();
+    let granted = init_granted_voter(
+        &ctx.accounts.granted.to_account_info(),
+        &ctx.accounts.authority.to_account_info(),
+        &ctx.accounts.system_program.to_account_info(),
+        &voter,
+        ctx.bumps.granted,
+    )?;
 
     emit!(VoterEligibilityGranted {
         voter_pubkey: granted.voter,
@@ -62,10 +67,14 @@ pub fn grant_eligibility(ctx: Context<GrantEligibility>) -> Result<()> {
 }
 
 pub fn revoke_eligibility(ctx: Context<RevokeEligibility>) -> Result<()> {
-    let revoked = &mut ctx.accounts.revoked;
-    revoked.voter = ctx.accounts.voter.key();
-    revoked.revoked_at_slot = Clock::get()?.slot;
-    revoked.bump = ctx.bumps.revoked;
+    let voter = ctx.accounts.voter.key();
+    let revoked = init_revoked_voter(
+        &ctx.accounts.revoked.to_account_info(),
+        &ctx.accounts.authority.to_account_info(),
+        &ctx.accounts.system_program.to_account_info(),
+        &voter,
+        ctx.bumps.revoked,
+    )?;
 
     emit!(VoterEligibilityRevoked {
         voter_pubkey: revoked.voter,

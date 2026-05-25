@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 
 pub mod constants;
 pub mod eligibility;
+pub mod eligibility_pda;
 pub mod errors;
 pub mod events;
 pub mod instructions;

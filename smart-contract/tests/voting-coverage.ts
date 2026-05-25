@@ -79,7 +79,7 @@ describe("voting coverage — eligibility (grant / revoke / frozen root)", () =>
     await grantEligibility(program, authority, voter.publicKey);
     await expectAnchorError(
       () => grantEligibility(program, authority, voter.publicKey),
-      /AlreadyGranted|already in use/i
+      "AlreadyGranted"
     );
   });
 
@@ -88,7 +88,7 @@ describe("voting coverage — eligibility (grant / revoke / frozen root)", () =>
     await revokeEligibility(program, authority, voter.publicKey);
     await expectAnchorError(
       () => revokeEligibility(program, authority, voter.publicKey),
-      /AlreadyRevoked|already in use/i
+      "AlreadyRevoked"
     );
   });
 
