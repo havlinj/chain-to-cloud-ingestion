@@ -185,13 +185,14 @@ pub struct GrantEligibility<'info> {
     pub registry: Account<'info, VoterRegistry>,
     /// CHECK: voter pubkey for PDA derivation only
     pub voter: UncheckedAccount<'info>,
-    /// CHECK: allocated in `grant_eligibility` when empty; seeds validated here
     #[account(
-        mut,
+        init_if_needed,
+        payer = authority,
+        space = GrantedVoter::LEN,
         seeds = [SEED_GRANTED, voter.key().as_ref()],
         bump
     )]
-    pub granted: UncheckedAccount<'info>,
+    pub granted: Account<'info, GrantedVoter>,
     pub system_program: Program<'info, System>,
 }
 
@@ -207,13 +208,14 @@ pub struct RevokeEligibility<'info> {
     pub registry: Account<'info, VoterRegistry>,
     /// CHECK: voter pubkey for PDA derivation only
     pub voter: UncheckedAccount<'info>,
-    /// CHECK: allocated in `revoke_eligibility` when empty; seeds validated here
     #[account(
-        mut,
+        init_if_needed,
+        payer = authority,
+        space = RevokedVoter::LEN,
         seeds = [SEED_REVOKED, voter.key().as_ref()],
         bump
     )]
-    pub revoked: UncheckedAccount<'info>,
+    pub revoked: Account<'info, RevokedVoter>,
     pub system_program: Program<'info, System>,
 }
 

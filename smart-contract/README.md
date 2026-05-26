@@ -84,6 +84,27 @@ console.log('OK');
 
 Covers: golden ADR vectors in TS, commit → reveal → finalize, ineligible voter, invalid reveal, single active proposal.
 
+### Toolchain troubleshooting
+
+`anchor build` / `anchor test` use **Solana’s bundled Cargo** (`cargo-build-sbf`), not only `rustup` stable. If you see:
+
+- `edition2024` required (often `indexmap v2.14.0`), or
+- `rustc 1.84.x-dev is not supported` (e.g. `unicode-segmentation` needs 1.85),
+
+then:
+
+1. **Upgrade Solana to Agave 3.1.x** (not 2.3.x):
+
+   ```bash
+   sh -c "$(curl -sSfL https://release.anza.xyz/v3.1.11/install)"
+   export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+   cargo-build-sbf --version   # platform-tools v1.52+, rustc ~1.89
+   ```
+
+2. **Use the repo `Cargo.lock`** (pins `indexmap` 2.13 and `unicode-segmentation` 1.12 for SBF Cargo 1.84). After `git pull`, do not delete `Cargo.lock` before `anchor test`.
+
+3. Host Rust for `cargo build -p voting`: **≥ 1.85** (`smart-contract/rust-toolchain.toml` pins `1.85.0`). `rustup update` alone does **not** fix SBF builds if Solana stays on 2.3.
+
 ## Instructions (program API)
 
 | Instruction | Purpose |

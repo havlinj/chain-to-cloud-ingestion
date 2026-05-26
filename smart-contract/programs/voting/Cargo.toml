@@ -22,5 +22,5 @@ custom-panic = []
 anchor-debug = []
 
 [dependencies]
-anchor-lang = "0.32.1"
+anchor-lang = { version = "0.32.1", features = ["init-if-needed"] }
 voting-crypto = { path = "../../crates/voting-crypto" }

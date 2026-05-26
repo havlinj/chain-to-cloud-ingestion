@@ -1,5 +1,5 @@
 [toolchain]
-# Anchor / `cargo build-sbf` need stable (edition2024 in anchor-lang deps).
+# Anchor 0.32 / host `cargo build` need Cargo with edition2024 (Rust >= 1.85).
 # CI still pins 1.78 explicitly for `cargo test -p voting-crypto` (see smart-contract.yml).
-channel = "stable"
+channel = "1.85.0"
 components = ["rustfmt", "clippy"]
