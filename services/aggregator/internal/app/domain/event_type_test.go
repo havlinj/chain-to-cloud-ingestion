@@ -8,12 +8,12 @@ import (
 )
 
 func TestEventTypeFromPayload_Valid(t *testing.T) {
-	eventType, err := domain.EventTypeFromPayload([]byte(`{"event_type":"VoteCast"}`))
+	eventType, err := domain.EventTypeFromPayload([]byte(`{"event_type":"VoteRevealed"}`))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if eventType != domain.EventTypeVoteCast {
-		t.Fatalf("got %q, want VoteCast", eventType)
+	if eventType != domain.EventTypeVoteRevealed {
+		t.Fatalf("got %q, want VoteRevealed", eventType)
 	}
 }
 

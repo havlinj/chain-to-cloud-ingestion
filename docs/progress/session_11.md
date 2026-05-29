@@ -11,9 +11,10 @@ Continue after Session 10. Session 9/10 left explicit next steps: review the Anc
 - Built a **gap matrix** (`VotingError` × integration tests × instruction paths) in `docs/planning/smart_contract_test_coverage_gaps.md`.
 - Short **security review** in the same doc (duplicate commit surface, `proposal_id` vs PDA seed limit, eligibility, phase timing, authority).
 
-### New integration tests (`smart-contract/tests/voting-gaps.ts`)
+### New integration tests (merged into `smart-contract/tests/voting-coverage.ts`)
 
-- **13 tests** added; `package.json` test script includes the new file.
+- **13 tests** added under existing `describe` blocks (eligibility, phases, registry validation).
+- Initially added in a separate `voting-gaps.ts` file during the audit; refactored into `voting-coverage.ts` so tests stay grouped by domain, not by “gap ticket”.
 - **create_proposal** validation: empty `proposal_id` / title, title too long, empty or long option label, more than `MAX_OPTIONS`.
 - **After close:** commit → `NotCommitPhase`; reveal / finalize → `ProposalNotOpen`.
 - **Reveal window:** reveal after `reveal_ends_at` → `NotRevealPhase`.
@@ -34,8 +35,7 @@ Continue after Session 10. Session 9/10 left explicit next steps: review the Anc
 ## Files Touched
 
 - `docs/planning/smart_contract_test_coverage_gaps.md` (new)
-- `smart-contract/tests/voting-gaps.ts` (new)
-- `smart-contract/package.json`
+- `smart-contract/tests/voting-coverage.ts`
 - `docs/progress/session_11.md` (this file)
 
 ## Verification

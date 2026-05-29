@@ -16,18 +16,18 @@ Status: **working document** after audit of `programs/voting/` and `tests/voting
 | Error | Where enforced | Test status | Notes |
 |-------|----------------|-------------|-------|
 | `ProposalIdTooLong` | `validate_proposal_id` | ⚠️ | Empty id → this error. Len 33–64 is **unreachable** in practice: PDA seed `proposal_id.as_bytes()` is max **32 bytes** per Solana seed → fails before custom error. Consider aligning `MAX_PROPOSAL_ID_LEN` with 32 or documenting. |
-| `TitleTooLong` | `validate_title` | ✅ | `voting-gaps.ts` |
-| `InvalidOptions` | `validate_options` | ⚠️ | Fewer than two options ✅. Empty option / long option / too many options → `voting-gaps.ts` |
+| `TitleTooLong` | `validate_title` | ✅ | `voting-coverage.ts` |
+| `InvalidOptions` | `validate_options` | ⚠️ | Fewer than two options ✅. Empty option / long option / too many options → `voting-coverage.ts` |
 | `CommitEndsInPast` | `create_proposal` | ✅ | `voting-coverage.ts` |
 | `RevealBeforeCommitEnd` | `create_proposal` | ✅ | `voting-coverage.ts` |
 | `ActiveProposalExists` | `create_proposal` | ✅ | `voting.ts` |
 | `NoActiveProposal` | — | ❌ | **Dead code** — not referenced in program |
-| `NotCommitPhase` | `commit_vote` | ✅ | After `commit_ends_at`, after close (`voting-gaps.ts`) |
-| `NotRevealPhase` | `reveal_vote` | ✅ | Before `commit_ends_at`; after `reveal_ends_at` (`voting-gaps.ts`) |
-| `ProposalNotOpen` | `close`/`finalize`/`reveal` | ⚠️ | Reveal after close ✅ (`voting-gaps.ts`). Finalize after close ✅. Close twice not tested (low value). |
-| `Unauthorized` | registry `has_one` | ⚠️ | `update_merkle_root` after transfer ✅. Grant/revoke unauthorized → `voting-gaps.ts` |
+| `NotCommitPhase` | `commit_vote` | ✅ | After `commit_ends_at`, after close (`voting-coverage.ts`) |
+| `NotRevealPhase` | `reveal_vote` | ✅ | Before `commit_ends_at`; after `reveal_ends_at` (`voting-coverage.ts`) |
+| `ProposalNotOpen` | `close`/`finalize`/`reveal` | ⚠️ | Reveal after close ✅ (`voting-coverage.ts`). Finalize after close ✅. Close twice not tested (low value). |
+| `Unauthorized` | registry `has_one` | ⚠️ | `update_merkle_root` after transfer ✅. Grant/revoke unauthorized → `voting-coverage.ts` |
 | `NotEligible` | `require_eligible` | ✅ | Multiple tests |
-| `MerkleProofInvalid` | proof verify / length | ⚠️ | Bad proof ✅. Len > 32: on-chain check exists; integration test may fail **client-side** (Borsh) before RPC — `voting-gaps.ts` accepts either error |
+| `MerkleProofInvalid` | proof verify / length | ⚠️ | Bad proof ✅. Len > 32: on-chain check exists; integration test may fail **client-side** (Borsh) before RPC — `voting-coverage.ts` accepts either error |
 | `AlreadyCommitted` | — | 🔧 | **Dead code.** Duplicate `commit_vote` fails on Anchor `init` → system **already in use**, not this enum |
 | `NotCommitted` | `RevealVote` constraints | ❌ | Needs existing commitment PDA with wrong `voter`/`proposal` linkage; normal “no commit” fails earlier (missing account) |
 | `AlreadyRevealed` | `reveal_vote` | ✅ | `voting-coverage.ts` |
@@ -68,7 +68,7 @@ Status: **working document** after audit of `programs/voting/` and `tests/voting
 
 ## Recommended next work (after this audit)
 
-1. **Done in this session:** fill validation + phase-after-close + unauthorized grant + long Merkle proof tests (`voting-gaps.ts`).
+1. **Done in this session:** fill validation + phase-after-close + unauthorized grant + long Merkle proof tests (`voting-coverage.ts`).
 2. **Optional contract hygiene:** remove dead `VotingError` variants or wire `AlreadyCommitted` via `init_if_needed` on commitment PDA.
 3. **Event assertions:** one test per emitted event type with decoded fields (ingestion depends on these).
 4. **Then pipeline:** Ingestion/Aggregator migration off `VoteCast` per `agreed_direction_skip_votecast.md`.

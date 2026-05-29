@@ -54,45 +54,72 @@ func (f *fakeProcessed) isMarked(eventID string) bool {
 }
 
 type fakeProposals struct {
-	applyErr error
-	undoErr  error
+	applyRevealErr error
+	undoRevealErr  error
 }
 
-func (f *fakeProposals) ApplyVoteCast(_ context.Context, _ domain.VoteCast) error {
-	return f.applyErr
+func (f *fakeProposals) ApplyProposalCreated(context.Context, domain.ProposalCreated) error {
+	return nil
 }
 
-func (f *fakeProposals) UndoVoteCast(_ context.Context, _ domain.VoteCast) error {
-	return f.undoErr
+func (f *fakeProposals) ApplyVoteRevealed(context.Context, domain.VoteRevealed) error {
+	return f.applyRevealErr
+}
+
+func (f *fakeProposals) UndoVoteRevealed(context.Context, domain.VoteRevealed) error {
+	return f.undoRevealErr
+}
+
+func (f *fakeProposals) ApplyProposalFinalized(context.Context, domain.ProposalFinalized) error {
+	return nil
+}
+
+func (f *fakeProposals) ApplyProposalClosed(context.Context, domain.ProposalClosed) error {
+	return nil
 }
 
 type fakeVoters struct {
 	err error
 }
 
-func (f *fakeVoters) RecordVoteCast(_ context.Context, _ domain.VoteCast) error {
-	return f.err
-}
-
-func (f *fakeVoters) UndoRecordVoteCast(_ context.Context, _ domain.VoteCast) error {
+func (f *fakeVoters) RecordVoteCommitted(context.Context, domain.VoteCommitted) error {
 	return nil
 }
 
-// voterOnceFails returns fail on the first RecordVoteCast call, then delegates to inner.
-type voterOnceFails struct {
+func (f *fakeVoters) UndoRecordVoteCommitted(context.Context, domain.VoteCommitted) error {
+	return nil
+}
+
+func (f *fakeVoters) RecordVoteRevealed(context.Context, domain.VoteRevealed) error {
+	return f.err
+}
+
+func (f *fakeVoters) UndoRecordVoteRevealed(context.Context, domain.VoteRevealed) error {
+	return nil
+}
+
+type voterRevealOnceFails struct {
 	inner repository.VoterActivityStore
 	fail  error
 	used  bool
 }
 
-func (v *voterOnceFails) RecordVoteCast(ctx context.Context, vote domain.VoteCast) error {
+func (v *voterRevealOnceFails) RecordVoteCommitted(ctx context.Context, e domain.VoteCommitted) error {
+	return v.inner.RecordVoteCommitted(ctx, e)
+}
+
+func (v *voterRevealOnceFails) UndoRecordVoteCommitted(ctx context.Context, e domain.VoteCommitted) error {
+	return v.inner.UndoRecordVoteCommitted(ctx, e)
+}
+
+func (v *voterRevealOnceFails) RecordVoteRevealed(ctx context.Context, e domain.VoteRevealed) error {
 	if !v.used {
 		v.used = true
 		return v.fail
 	}
-	return v.inner.RecordVoteCast(ctx, vote)
+	return v.inner.RecordVoteRevealed(ctx, e)
 }
 
-func (v *voterOnceFails) UndoRecordVoteCast(ctx context.Context, vote domain.VoteCast) error {
-	return v.inner.UndoRecordVoteCast(ctx, vote)
+func (v *voterRevealOnceFails) UndoRecordVoteRevealed(ctx context.Context, e domain.VoteRevealed) error {
+	return v.inner.UndoRecordVoteRevealed(ctx, e)
 }

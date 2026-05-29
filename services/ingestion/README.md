@@ -1,66 +1,33 @@
-# Ingestion Service (TypeScript)
+# Ingestion Service
 
-AWS Lambda adapter that polls Solana program transactions, normalizes contract events to the canonical JSON envelope, and publishes them to SNS.
+TypeScript AWS Lambda adapter: Solana program transactions → canonical JSON events → SNS.
 
 ## Responsibilities
 
-- Connect to Solana RPC
-- Parse program logs into `ProposalCreated`, `VoteCast`, and `ProposalClosed`
-- Add required metadata (`event_id`, `timestamp`, `source`, `version`)
-- Publish to SNS
+- Poll Solana RPC for recent transactions to the voting program
+- Decode **Anchor `emit!` events** from transaction logs (IDL: `src/idl/voting.json`)
+- Normalize to the canonical envelope (`event_id`, `event_type`, `timestamp`, `source`, `version`)
+- Publish to SNS (fan-out to Aggregator and Forwarder queues)
 
-No business logic, projections, or database access.
+## Supported event types
 
-## Layout
+- `ProposalCreated`, `VoteCommitted`, `VoteRevealed`, `ProposalClosed`, `ProposalFinalized`
+- `EligibleVotersRootUpdated`, `VoterEligibilityGranted`, `VoterEligibilityRevoked`
 
-```
-src/
-  handler.ts              Lambda entrypoint
-  config.ts               Environment configuration
-  app/ingest.ts           Orchestration
-  domain/events.ts        Event types and normalization
-  blockchain/             Solana fetch + log parsing
-  publisher/sns.ts        SNS publisher
-```
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SNS_TOPIC_ARN` | yes | Target SNS topic ARN |
-| `SOLANA_RPC_URL` | yes | Solana RPC endpoint |
-| `SOLANA_PROGRAM_ID` | yes | Voting program public key |
-| `INGESTION_LOOKBACK_SLOTS` | no | Slot lookback window (default `50`) |
-| `EVENT_SOURCE` | no | Event `source` field (default `voting-contract`) |
-| `EVENT_VERSION` | no | Event schema version (default `1`) |
-
-## Contract Log Format
-
-Until Anchor IDL-based parsing is added, the service expects program logs like:
-
-```
-Program log: {"event_type":"VoteCast","proposal_id":"p1","option_id":"1","voter_pubkey":"..."}
-```
-
-Ingestion adds `event_id`, `timestamp`, `source`, `version`, and for `VoteCast` also `slot` and `tx_signature`.
+Legacy **`VoteCast`** is not supported.
 
 ## Commands
 
 ```bash
+cd services/ingestion
 npm install
 npm test
 npm run typecheck
-npm run package
+npm run package   # build dist/handler.mjs + ingestion-lambda.zip
 ```
 
-`npm run package` produces `ingestion-lambda.zip` for Terraform (`ingestion_lambda_zip_path`).
+## Configuration
 
-## Terraform
+Environment variables (see `src/config.ts`): `SNS_TOPIC_ARN`, `SOLANA_RPC_URL`, `SOLANA_PROGRAM_ID`, `LOOKBACK_SLOTS`, `EVENT_SOURCE`, `EVENT_VERSION`.
 
-Set `ingestion_lambda_zip_path` to the zip path and provide `solana_rpc_url` / `solana_program_id` variables in `infra/aws`.
-
-The Lambda uses runtime `nodejs20.x` and handler `handler.handler`.
-
-## Local Notes
-
-The handler is designed for scheduled invocation (for example EventBridge). A long-lived WebSocket subscriber can be added later without changing the normalization or publish layers.
+`SOLANA_PROGRAM_ID` should match the deployed voting program (default in IDL: `VotiNG1111111111111111111111111111111111111`).

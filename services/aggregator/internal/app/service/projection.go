@@ -38,95 +38,154 @@ func (s *ProjectionService) ProcessPayload(ctx context.Context, raw []byte) erro
 	if err != nil {
 		return err
 	}
-	if eventType != domain.EventTypeVoteCast {
+
+	switch eventType {
+	case domain.EventTypeProposalCreated:
+		event, err := domain.ParseProposalCreated(raw)
+		if err != nil {
+			return err
+		}
+		return s.processProposalCreated(ctx, event)
+	case domain.EventTypeVoteCommitted:
+		event, err := domain.ParseVoteCommitted(raw)
+		if err != nil {
+			return err
+		}
+		return s.processVoteCommitted(ctx, event)
+	case domain.EventTypeVoteRevealed:
+		event, err := domain.ParseVoteRevealed(raw)
+		if err != nil {
+			return err
+		}
+		return s.processVoteRevealed(ctx, event)
+	case domain.EventTypeProposalFinalized:
+		event, err := domain.ParseProposalFinalized(raw)
+		if err != nil {
+			return err
+		}
+		return s.processProposalFinalized(ctx, event)
+	case domain.EventTypeProposalClosed:
+		event, err := domain.ParseProposalClosed(raw)
+		if err != nil {
+			return err
+		}
+		return s.processProposalClosed(ctx, event)
+	case domain.EventTypeEligibleVotersRootUpdated,
+		domain.EventTypeVoterEligibilityGranted,
+		domain.EventTypeVoterEligibilityRevoked:
 		s.logger.Info(
-			"skip unsupported event type for iteration 1",
+			"skip eligibility audit event (not projected in this iteration)",
+			"service", "aggregator",
+			"event_type", eventType,
+		)
+		return nil
+	default:
+		s.logger.Info(
+			"skip unsupported event type",
 			"service", "aggregator",
 			"event_type", eventType,
 		)
 		return nil
 	}
-
-	vote, err := domain.ParseVoteCast(raw)
-	if err != nil {
-		return err
-	}
-	return s.ProcessVoteCast(ctx, vote)
 }
 
-func (s *ProjectionService) ProcessVoteCast(ctx context.Context, vote domain.VoteCast) error {
-	already, err := s.processed.IsProcessed(ctx, vote.EventID)
+func (s *ProjectionService) processProposalCreated(ctx context.Context, event domain.ProposalCreated) error {
+	return s.runIdempotent(ctx, event.EventID, event.EventType, event.ProposalID, func() error {
+		return s.proposals.ApplyProposalCreated(ctx, event)
+	}, nil)
+}
+
+func (s *ProjectionService) processVoteCommitted(ctx context.Context, event domain.VoteCommitted) error {
+	return s.runIdempotent(ctx, event.EventID, event.EventType, event.ProposalID, func() error {
+		return s.voters.RecordVoteCommitted(ctx, event)
+	}, func() {
+		s.voters.UndoRecordVoteCommitted(ctx, event)
+	})
+}
+
+func (s *ProjectionService) processVoteRevealed(ctx context.Context, event domain.VoteRevealed) error {
+	return s.runIdempotent(ctx, event.EventID, event.EventType, event.ProposalID, func() error {
+		if err := s.proposals.ApplyVoteRevealed(ctx, event); err != nil {
+			return err
+		}
+		if err := s.voters.RecordVoteRevealed(ctx, event); err != nil {
+			if undoErr := s.proposals.UndoVoteRevealed(ctx, event); undoErr != nil {
+				return fmt.Errorf("record VoteRevealed: %w (undo proposal: %v)", err, undoErr)
+			}
+			return fmt.Errorf("record VoteRevealed: %w", err)
+		}
+		return nil
+	}, func() {
+		s.voters.UndoRecordVoteRevealed(ctx, event)
+		s.proposals.UndoVoteRevealed(ctx, event)
+	})
+}
+
+func (s *ProjectionService) processProposalFinalized(ctx context.Context, event domain.ProposalFinalized) error {
+	return s.runIdempotent(ctx, event.EventID, event.EventType, event.ProposalID, func() error {
+		return s.proposals.ApplyProposalFinalized(ctx, event)
+	}, nil)
+}
+
+func (s *ProjectionService) processProposalClosed(ctx context.Context, event domain.ProposalClosed) error {
+	return s.runIdempotent(ctx, event.EventID, event.EventType, event.ProposalID, func() error {
+		return s.proposals.ApplyProposalClosed(ctx, event)
+	}, nil)
+}
+
+func (s *ProjectionService) runIdempotent(
+	ctx context.Context,
+	eventID string,
+	eventType string,
+	proposalID string,
+	apply func() error,
+	rollback func(),
+) error {
+	already, err := s.processed.IsProcessed(ctx, eventID)
 	if err != nil {
-		return fmt.Errorf("check processed VoteCast: %w", err)
+		return fmt.Errorf("check processed %s: %w", eventType, err)
 	}
 	if already {
 		s.logger.Info(
 			"duplicate event skipped",
 			"service", "aggregator",
-			"event_id", vote.EventID,
-			"event_type", vote.EventType,
-			"proposal_id", vote.ProposalID,
+			"event_id", eventID,
+			"event_type", eventType,
+			"proposal_id", proposalID,
 		)
 		return nil
 	}
 
-	if err := s.applyVoteCast(ctx, vote); err != nil {
+	if err := apply(); err != nil {
 		return err
 	}
 
-	already, err = s.processed.TryMarkProcessed(ctx, vote.EventID)
+	already, err = s.processed.TryMarkProcessed(ctx, eventID)
 	if err != nil {
-		s.rollbackVoteCast(ctx, vote)
-		return fmt.Errorf("mark processed VoteCast: %w", err)
+		if rollback != nil {
+			rollback()
+		}
+		return fmt.Errorf("mark processed %s: %w", eventType, err)
 	}
 	if already {
-		s.rollbackVoteCast(ctx, vote)
+		if rollback != nil {
+			rollback()
+		}
 		s.logger.Warn(
 			"processed marker already exists after apply",
 			"service", "aggregator",
-			"event_id", vote.EventID,
+			"event_id", eventID,
+			"event_type", eventType,
 		)
 		return nil
 	}
 
 	s.logger.Info(
-		"VoteCast applied",
+		"event applied",
 		"service", "aggregator",
-		"event_id", vote.EventID,
-		"event_type", vote.EventType,
-		"proposal_id", vote.ProposalID,
+		"event_id", eventID,
+		"event_type", eventType,
+		"proposal_id", proposalID,
 	)
 	return nil
-}
-
-func (s *ProjectionService) applyVoteCast(ctx context.Context, vote domain.VoteCast) error {
-	if err := s.proposals.ApplyVoteCast(ctx, vote); err != nil {
-		return fmt.Errorf("update proposal projection: %w", err)
-	}
-	if err := s.voters.RecordVoteCast(ctx, vote); err != nil {
-		if undoErr := s.proposals.UndoVoteCast(ctx, vote); undoErr != nil {
-			return fmt.Errorf("update voter activity: %w (undo proposal: %v)", err, undoErr)
-		}
-		return fmt.Errorf("update voter activity: %w", err)
-	}
-	return nil
-}
-
-func (s *ProjectionService) rollbackVoteCast(ctx context.Context, vote domain.VoteCast) {
-	if err := s.voters.UndoRecordVoteCast(ctx, vote); err != nil {
-		s.logger.Error(
-			"rollback voter activity failed",
-			"service", "aggregator",
-			"event_id", vote.EventID,
-			"error", err,
-		)
-	}
-	if err := s.proposals.UndoVoteCast(ctx, vote); err != nil {
-		s.logger.Error(
-			"rollback proposal projection failed",
-			"service", "aggregator",
-			"event_id", vote.EventID,
-			"error", err,
-		)
-	}
 }

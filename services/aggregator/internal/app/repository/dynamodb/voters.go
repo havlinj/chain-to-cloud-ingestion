@@ -20,39 +20,94 @@ func NewVoterActivityRepository(client *dynamodb.Client, tableName string) *Vote
 	return &VoterActivityRepository{client: client, tableName: tableName}
 }
 
-func (r *VoterActivityRepository) RecordVoteCast(ctx context.Context, vote domain.VoteCast) error {
+func (r *VoterActivityRepository) RecordVoteCommitted(ctx context.Context, event domain.VoteCommitted) error {
 	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName: aws.String(r.tableName),
 		Key: map[string]types.AttributeValue{
-			"voter_pubkey": &types.AttributeValueMemberS{Value: vote.VoterPubkey},
+			"voter_pubkey": &types.AttributeValueMemberS{Value: event.VoterPubkey},
 		},
 		UpdateExpression: aws.String(
-			"SET last_vote_timestamp = :ts ADD votes_cast :one",
+			"SET last_commit_timestamp = :ts, " +
+				"proposals.#pid.has_committed = :true",
 		),
+		ExpressionAttributeNames: map[string]string{
+			"#pid": event.ProposalID,
+		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":ts":  &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", vote.Timestamp)},
-			":one": &types.AttributeValueMemberN{Value: "1"},
+			":ts":   &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", event.Timestamp)},
+			":true": &types.AttributeValueMemberBOOL{Value: true},
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("record VoteCast voter activity: %w", err)
+		return fmt.Errorf("record VoteCommitted: %w", err)
 	}
 	return nil
 }
 
-func (r *VoterActivityRepository) UndoRecordVoteCast(ctx context.Context, vote domain.VoteCast) error {
+func (r *VoterActivityRepository) UndoRecordVoteCommitted(ctx context.Context, event domain.VoteCommitted) error {
 	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName: aws.String(r.tableName),
 		Key: map[string]types.AttributeValue{
-			"voter_pubkey": &types.AttributeValueMemberS{Value: vote.VoterPubkey},
+			"voter_pubkey": &types.AttributeValueMemberS{Value: event.VoterPubkey},
 		},
-		UpdateExpression: aws.String("ADD votes_cast :minusOne"),
+		UpdateExpression: aws.String(
+			"SET proposals.#pid.has_committed = :false",
+		),
+		ExpressionAttributeNames: map[string]string{
+			"#pid": event.ProposalID,
+		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":minusOne": &types.AttributeValueMemberN{Value: "-1"},
+			":false": &types.AttributeValueMemberBOOL{Value: false},
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("undo VoteCast voter activity: %w", err)
+		return fmt.Errorf("undo VoteCommitted: %w", err)
+	}
+	return nil
+}
+
+func (r *VoterActivityRepository) RecordVoteRevealed(ctx context.Context, event domain.VoteRevealed) error {
+	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: aws.String(r.tableName),
+		Key: map[string]types.AttributeValue{
+			"voter_pubkey": &types.AttributeValueMemberS{Value: event.VoterPubkey},
+		},
+		UpdateExpression: aws.String(
+			"SET last_reveal_timestamp = :ts, " +
+				"proposals.#pid.has_revealed = :true",
+		),
+		ExpressionAttributeNames: map[string]string{
+			"#pid": event.ProposalID,
+		},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":ts":   &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", event.Timestamp)},
+			":true": &types.AttributeValueMemberBOOL{Value: true},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("record VoteRevealed: %w", err)
+	}
+	return nil
+}
+
+func (r *VoterActivityRepository) UndoRecordVoteRevealed(ctx context.Context, event domain.VoteRevealed) error {
+	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: aws.String(r.tableName),
+		Key: map[string]types.AttributeValue{
+			"voter_pubkey": &types.AttributeValueMemberS{Value: event.VoterPubkey},
+		},
+		UpdateExpression: aws.String(
+			"SET proposals.#pid.has_revealed = :false",
+		),
+		ExpressionAttributeNames: map[string]string{
+			"#pid": event.ProposalID,
+		},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":false": &types.AttributeValueMemberBOOL{Value: false},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("undo VoteRevealed: %w", err)
 	}
 	return nil
 }

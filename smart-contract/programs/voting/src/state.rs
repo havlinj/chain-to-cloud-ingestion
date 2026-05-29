@@ -249,7 +249,7 @@ pub struct CommitVote<'info> {
     )]
     pub proposal: Account<'info, Proposal>,
     #[account(
-        init,
+        init_if_needed,
         payer = voter,
         space = CommitmentAccount::LEN,
         seeds = [SEED_COMMITMENT, proposal.key().as_ref(), voter.key().as_ref()],

@@ -11,7 +11,8 @@ pub const SEED_GRANTED: &[u8] = b"granted";
 /// PDA seed prefix for a revoked-voter marker.
 pub const SEED_REVOKED: &[u8] = b"revoked";
 
-pub const MAX_PROPOSAL_ID_LEN: usize = 64;
+/// Must match Solana PDA seed limit (32 bytes per seed element).
+pub const MAX_PROPOSAL_ID_LEN: usize = 32;
 pub const MAX_TITLE_LEN: usize = 128;
 pub const MAX_OPTIONS: usize = 16;
 pub const MAX_OPTION_LEN: usize = 64;

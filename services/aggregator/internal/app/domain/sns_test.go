@@ -8,7 +8,7 @@ import (
 )
 
 func TestUnwrapEventPayload_DirectEvent(t *testing.T) {
-	raw := `{"event_type":"VoteCast","event_id":"e1"}`
+	raw := `{"event_type":"VoteRevealed","event_id":"e1"}`
 	payload, err := domain.UnwrapEventPayload(raw)
 	if err != nil {
 		t.Fatalf("unwrap: %v", err)
@@ -19,12 +19,12 @@ func TestUnwrapEventPayload_DirectEvent(t *testing.T) {
 }
 
 func TestUnwrapEventPayload_SNSEnvelope(t *testing.T) {
-	body := `{"Type":"Notification","Message":"{\"event_type\":\"VoteCast\",\"event_id\":\"e1\"}"}`
+	body := `{"Type":"Notification","Message":"{\"event_type\":\"VoteRevealed\",\"event_id\":\"e1\"}"}`
 	payload, err := domain.UnwrapEventPayload(body)
 	if err != nil {
 		t.Fatalf("unwrap: %v", err)
 	}
-	if string(payload) != `{"event_type":"VoteCast","event_id":"e1"}` {
+	if string(payload) != `{"event_type":"VoteRevealed","event_id":"e1"}` {
 		t.Fatalf("payload = %s", string(payload))
 	}
 }
@@ -52,7 +52,7 @@ func TestUnwrapEventPayload_InvalidJSONObject(t *testing.T) {
 }
 
 func TestUnwrapEventPayload_MessageNotStringUsesFallback(t *testing.T) {
-	body := `{"Type":"Notification","Message":{"event_type":"VoteCast"}}`
+	body := `{"Type":"Notification","Message":{"event_type":"VoteRevealed"}}`
 	payload, err := domain.UnwrapEventPayload(body)
 	if err != nil {
 		t.Fatalf("unwrap: %v", err)

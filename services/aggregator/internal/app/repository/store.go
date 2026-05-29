@@ -13,13 +13,18 @@ type ProcessedEventsStore interface {
 }
 
 type ProposalsStore interface {
-	ApplyVoteCast(ctx context.Context, vote domain.VoteCast) error
-	UndoVoteCast(ctx context.Context, vote domain.VoteCast) error
+	ApplyProposalCreated(ctx context.Context, event domain.ProposalCreated) error
+	ApplyVoteRevealed(ctx context.Context, event domain.VoteRevealed) error
+	UndoVoteRevealed(ctx context.Context, event domain.VoteRevealed) error
+	ApplyProposalFinalized(ctx context.Context, event domain.ProposalFinalized) error
+	ApplyProposalClosed(ctx context.Context, event domain.ProposalClosed) error
 }
 
 type VoterActivityStore interface {
-	RecordVoteCast(ctx context.Context, vote domain.VoteCast) error
-	UndoRecordVoteCast(ctx context.Context, vote domain.VoteCast) error
+	RecordVoteCommitted(ctx context.Context, event domain.VoteCommitted) error
+	UndoRecordVoteCommitted(ctx context.Context, event domain.VoteCommitted) error
+	RecordVoteRevealed(ctx context.Context, event domain.VoteRevealed) error
+	UndoRecordVoteRevealed(ctx context.Context, event domain.VoteRevealed) error
 }
 
 type Store interface {

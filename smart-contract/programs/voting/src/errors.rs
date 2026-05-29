@@ -14,8 +14,6 @@ pub enum VotingError {
     RevealBeforeCommitEnd,
     #[msg("another proposal is already active in commit or reveal phase")]
     ActiveProposalExists,
-    #[msg("no active proposal")]
-    NoActiveProposal,
     #[msg("voting is not in commit phase")]
     NotCommitPhase,
     #[msg("voting is not in reveal phase")]
@@ -40,12 +38,8 @@ pub enum VotingError {
     UnknownOptionId,
     #[msg("reveal phase has not ended yet")]
     RevealNotEnded,
-    #[msg("proposal is not active")]
-    ProposalNotActive,
     #[msg("voter already granted")]
     AlreadyGranted,
-    #[msg("voter not granted")]
-    NotGranted,
     #[msg("voter already revoked")]
     AlreadyRevoked,
 }

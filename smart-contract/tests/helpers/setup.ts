@@ -40,9 +40,9 @@ export async function setMerkleRoot(
   authority: Keypair,
   newRoot: Uint8Array,
   listHash: Uint8Array
-): Promise<void> {
+): Promise<string> {
   const registry = voterRegistryPda(program.programId);
-  await program.methods
+  return program.methods
     .updateMerkleRoot(bytesToArray32(newRoot), bytesToArray32(listHash))
     .accounts({
       authority: authority.publicKey,

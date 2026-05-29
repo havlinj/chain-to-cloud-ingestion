@@ -19,10 +19,10 @@ func newTestHandler() (*handlers.SQSHandler, *memory.Store) {
 	return handlers.NewSQSHandler(svc, slog.Default()), store
 }
 
-func TestSQSHandler_Handle_VoteCastThroughSNSEnvelope(t *testing.T) {
+func TestSQSHandler_Handle_VoteRevealedThroughSNSEnvelope(t *testing.T) {
 	handler, store := newTestHandler()
 
-	body := `{"Type":"Notification","Message":"{\"event_id\":\"sqs-1\",\"event_type\":\"VoteCast\",\"timestamp\":1,\"source\":\"voting-contract\",\"version\":1,\"proposal_id\":\"p1\",\"option_id\":\"a\",\"voter_pubkey\":\"v1\",\"slot\":1,\"tx_signature\":\"sig\"}"}`
+	body := `{"Type":"Notification","Message":"{\"event_id\":\"sqs-1\",\"event_type\":\"VoteRevealed\",\"timestamp\":1,\"source\":\"voting-contract\",\"version\":1,\"proposal_id\":\"p1\",\"option_id\":\"a\",\"voter_pubkey\":\"v1\",\"slot\":1,\"tx_signature\":\"sig\"}"}`
 	event := events.SQSEvent{
 		Records: []events.SQSMessage{
 			{MessageId: "msg-1", Body: body},
@@ -62,10 +62,10 @@ func TestSQSHandler_Handle_InvalidBodyReportsBatchFailure(t *testing.T) {
 	}
 }
 
-func TestSQSHandler_Handle_InvalidVoteCastReportsBatchFailure(t *testing.T) {
+func TestSQSHandler_Handle_InvalidVoteRevealedReportsBatchFailure(t *testing.T) {
 	handler, _ := newTestHandler()
 
-	body := `{"event_id":"e1","event_type":"VoteCast","timestamp":1,"source":"voting-contract","version":1,"option_id":"yes","voter_pubkey":"v1"}`
+	body := `{"event_id":"e1","event_type":"VoteRevealed","timestamp":1,"source":"voting-contract","version":1,"option_id":"yes","voter_pubkey":"v1"}`
 	event := events.SQSEvent{
 		Records: []events.SQSMessage{
 			{MessageId: "bad-vote", Body: body},
@@ -84,7 +84,7 @@ func TestSQSHandler_Handle_InvalidVoteCastReportsBatchFailure(t *testing.T) {
 func TestSQSHandler_Handle_PartialBatchFailure(t *testing.T) {
 	handler, store := newTestHandler()
 
-	good := `{"event_id":"good-1","event_type":"VoteCast","timestamp":1,"source":"voting-contract","version":1,"proposal_id":"p1","option_id":"a","voter_pubkey":"v1"}`
+	good := `{"event_id":"good-1","event_type":"VoteRevealed","timestamp":1,"source":"voting-contract","version":1,"proposal_id":"p1","option_id":"a","voter_pubkey":"v1"}`
 	event := events.SQSEvent{
 		Records: []events.SQSMessage{
 			{MessageId: "good", Body: good},
@@ -104,7 +104,7 @@ func TestSQSHandler_Handle_PartialBatchFailure(t *testing.T) {
 	}
 }
 
-func TestSQSHandler_Handle_SkipsProposalCreatedWithoutFailure(t *testing.T) {
+func TestSQSHandler_Handle_InvalidProposalCreatedReportsBatchFailure(t *testing.T) {
 	handler, store := newTestHandler()
 
 	body := `{"event_id":"pc-1","event_type":"ProposalCreated","timestamp":1,"source":"voting-contract","version":1,"proposal_id":"p9","title":"T","options":["a"]}`
@@ -118,10 +118,10 @@ func TestSQSHandler_Handle_SkipsProposalCreatedWithoutFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("handle: %v", err)
 	}
-	if len(resp.BatchItemFailures) != 0 {
-		t.Fatalf("batch failures: %+v", resp.BatchItemFailures)
+	if len(resp.BatchItemFailures) != 1 {
+		t.Fatalf("expected batch failure for invalid ProposalCreated, got %+v", resp.BatchItemFailures)
 	}
 	if store.ProposalVoteCount("p9", "a") != 0 {
-		t.Fatal("skipped event must not update projections")
+		t.Fatal("invalid event must not update projections")
 	}
 }

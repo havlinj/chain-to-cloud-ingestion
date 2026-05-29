@@ -72,9 +72,9 @@ export async function grantEligibility(
   program: VotingProgram,
   authority: Keypair,
   voter: PublicKey
-): Promise<void> {
+): Promise<string> {
   const registry = voterRegistryPda(program.programId);
-  await program.methods
+  return program.methods
     .grantEligibility()
     .accounts({
       authority: authority.publicKey,
@@ -91,9 +91,9 @@ export async function revokeEligibility(
   program: VotingProgram,
   authority: Keypair,
   voter: PublicKey
-): Promise<void> {
+): Promise<string> {
   const registry = voterRegistryPda(program.programId);
-  await program.methods
+  return program.methods
     .revokeEligibility()
     .accounts({
       authority: authority.publicKey,

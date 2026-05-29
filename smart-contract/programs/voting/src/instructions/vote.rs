@@ -33,6 +33,13 @@ pub fn commit_vote(
         ctx.accounts.revoked_voter.as_ref().map(|a| a.as_ref()),
     )?;
 
+    let commitment_account = &ctx.accounts.commitment_account;
+    let voter_key = ctx.accounts.voter.key();
+    let already_committed = commitment_account.proposal == proposal.key()
+        && commitment_account.voter == voter_key
+        && commitment_account.commitment != [0u8; 32];
+    require!(!already_committed, VotingError::AlreadyCommitted);
+
     let commitment_account = &mut ctx.accounts.commitment_account;
     commitment_account.proposal = proposal.key();
     commitment_account.voter = ctx.accounts.voter.key();
