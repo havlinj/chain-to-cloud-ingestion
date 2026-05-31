@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use voting_crypto::{merkle_leaf, verify_merkle_proof, MerkleProofError};
+use voting_crypto::{merkle_leaf, verify_merkle_proof};
 
 use crate::errors::VotingError;
 use crate::state::{GrantedVoter, Proposal, RevokedVoter};
@@ -53,15 +53,14 @@ pub fn require_eligible(
     }
     if !merkle_proof.is_empty() {
         let leaf = merkle_leaf(&voter.to_bytes());
-        if matches!(
-            verify_merkle_proof(
-                leaf,
-                merkle_proof,
-                proposal.electorate_merkle_root,
-                leaf_index as usize
-            ),
-            Err(MerkleProofError::RootMismatch) | Err(MerkleProofError::EmptyProof)
-        ) {
+        if verify_merkle_proof(
+            leaf,
+            merkle_proof,
+            proposal.electorate_merkle_root,
+            leaf_index as usize,
+        )
+        .is_err()
+        {
             return err!(VotingError::MerkleProofInvalid);
         }
     }
