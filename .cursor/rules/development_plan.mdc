@@ -230,6 +230,25 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
   - **0001** — electorate enumeration (`list_hash`, Merkle leaves).
   - **0002** — multisig-capable admin.
 
+### Self-audit workshop (learning; no third party)
+
+This project is **practice / portfolio scope**. There is **no** planned external smart-contract audit from a vendor. Instead, run a **collaborative self-audit** with the maintainer to learn how contract review is done systematically.
+
+- **Purpose:** Learn threat modeling, invariant checking, and findings triage — not a formal certification report.
+- **When:** After **E2E slice** (step 7) and **`tools/eligibility-admin/`** (step 4) are done, and **`smart-contract/`** is in **feature freeze** for a short window (anchor tests green; ADRs **0001–0003** match implementation). Do **not** schedule the full workshop while the on-chain surface is still changing weekly.
+- **Before the workshop:** Informal code walkthroughs after major contract changes (e.g. `docs/progress/session_13.md`) are encouraged; they are **not** a substitute for the structured session.
+- **Agenda (1–2 sessions):**
+  1. Scope and assets — what the program protects vs. what stays off-chain (salt, UI).
+  2. Threat model — admin compromise, Sybil, double commit/reveal, bad Merkle proof, phase bypass, PDA/account confusion.
+  3. Invariant checklist — single active proposal, frozen electorate, one commit per voter, tally from reveal only, etc.
+  4. Instruction-by-instruction walk — registry → proposal → commit → reveal → finalize; grant/revoke.
+  5. Crypto and golden fixtures — ADR **0001** / **0003** vectors; `voting-crypto` vs on-chain verifier.
+  6. Account constraints and PDAs — seeds, bumps, `init_if_needed`, authority checks.
+  7. Events vs enforcement — what is immutable fact for the pipeline vs what the program enforces.
+  8. Findings backlog — tag each item `Critical` / `Should fix` / `Nice` / `Document`; link to test, fix, or ADR note.
+- **Output:** `docs/progress/session_N.md` and/or `docs/planning/smart_contract_self_audit.md` (findings + follow-ups). Re-run only if `programs/voting/` changes materially after the workshop.
+- **Non-goals:** Paid audit, mainnet readiness certification, formal verification.
+
 ## 3.3 Phase 3 Implementation Plan (code, not rules-only)
 
 Goal: move from **defined** governance to **implemented and tested** on devnet. Order matters; do not skip ADRs for contested choices.
@@ -245,10 +264,11 @@ Goal: move from **defined** governance to **implemented and tested** on devnet. 
 | **6. Aggregator** | Handlers for commit/reveal; `results_visible`; participation; gRPC for UI | Replace `VoteCast`-only iteration 1 paths |
 | **7. E2E slice** | Devnet + UI policy | commit → reveal → finalize → results visible; ineligible commit fails |
 | **8. Docs** | `docs/progress/` entry; align `event_schema.mdc` with ADR fields | Implementable by others |
+| **9. Self-audit workshop** | Collaborative review session(s) with maintainer | Threat model, invariants, findings backlog in `docs/progress/` or `docs/planning/`; learning exercise only |
 
 **Avoid:** deploying a long-lived “open vote” program to devnet if the team will treat it as the real governance program — prefer one deploy with eligibility, or clearly label legacy program ID.
 
-**Not in Phase 3:** Kafka, full UI, playground orchestrator (Phases 4–5).
+**Not in Phase 3:** Kafka, full UI, playground orchestrator (Phases 4–5); **external** third-party smart-contract audit (use self-audit workshop instead for this repo).
 
 ## 3.4 Phase 3 Exit Criteria
 
@@ -259,6 +279,7 @@ Goal: move from **defined** governance to **implemented and tested** on devnet. 
 - Retroactive audit: from stored events, one can list (1) electorate snapshot for proposal X, (2) all global add/remove/root updates with timestamps.
 - Duplicate vote per proposal per wallet is rejected on-chain.
 - Eligibility and transparency rules documented in **`architecture.mdc`** §8 and **`service_boundaries.mdc`**.
+- **Self-audit workshop** completed (step 9): structured review notes and findings backlog recorded; no requirement for third-party audit on this practice project.
 
 ---
 
@@ -374,7 +395,7 @@ Goal: move from **defined** governance to **implemented and tested** on devnet. 
 |-------|--------|---------------------|
 | **1** | Operational pipeline (AWS) | Contract, Ingestion (TypeScript), SNS/SQS, Aggregator (Go), DynamoDB, **gRPC API**, AWS Terraform, basic observability, CI |
 | **2** | Cross-cloud, analytics, **UI first slice** | Forwarder, Pub/Sub, Analytics, BigQuery, GCP Terraform, **user_interface/** (Elixir/Phoenix LiveView, Aggregator gRPC client, list + detail), CI for GCP and UI |
-| **3** | **Commit–reveal + eligibility** | Merkle registry, commit/reveal contract, Aggregator gRPC for UI, ADRs 0001–0003 |
+| **3** | **Commit–reveal + eligibility** | Merkle registry, commit/reveal contract, Aggregator gRPC for UI, ADRs 0001–0003, **self-audit workshop** (learning) |
 | **4** | Event backbone, **UI full slice**, production | Kafka/MSK (opt.), schema registry (opt.), **UI streaming + Analytics gRPC + voter activity**, Grafana, alerting, E2E tests, load/runbooks, OIDC/security |
 | **5** | **Playground & simulation** | Primitive **voting UI** (create proposal, vote on chain); **configurable orchestrator** (chain mode; injection mode optional); playground runbook; observe full pipeline and dashboards |
 
