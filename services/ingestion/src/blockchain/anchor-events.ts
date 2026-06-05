@@ -2,7 +2,7 @@ import { BorshCoder, EventParser, type Idl } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import bs58 from "bs58";
 
-import type { EventType, ParsedChainEvent } from "../domain/events.js";
+import { isEventType, type EventType, type ParsedChainEvent } from "../domain/events.js";
 import votingIdl from "../idl/voting.json" with { type: "json" };
 
 const PROGRAM_ID = new PublicKey(
@@ -12,39 +12,86 @@ const PROGRAM_ID = new PublicKey(
 const coder = new BorshCoder(votingIdl as Idl);
 const parser = new EventParser(PROGRAM_ID, coder);
 
-const ANCHOR_EVENT_TO_CANONICAL: Record<string, EventType> = {
-  proposalCreated: "ProposalCreated",
-  voteCommitted: "VoteCommitted",
-  voteRevealed: "VoteRevealed",
-  proposalClosed: "ProposalClosed",
-  proposalFinalized: "ProposalFinalized",
-  eligibleVotersRootUpdated: "EligibleVotersRootUpdated",
-  voterEligibilityGranted: "VoterEligibilityGranted",
-  voterEligibilityRevoked: "VoterEligibilityRevoked",
-};
+/** Anchor may emit PascalCase (IDL) or camelCase; canonical types are PascalCase. */
+function resolveCanonicalEventType(anchorName: string): EventType | null {
+  if (isEventType(anchorName)) {
+    return anchorName;
+  }
+  if (anchorName.length === 0) {
+    return null;
+  }
+  const pascalCase = anchorName[0]!.toUpperCase() + anchorName.slice(1);
+  if (isEventType(pascalCase)) {
+    return pascalCase;
+  }
+  return null;
+}
+
+function readField(data: Record<string, unknown>, ...keys: string[]): unknown {
+  for (const key of keys) {
+    if (data[key] !== undefined && data[key] !== null) {
+      return data[key];
+    }
+  }
+  return undefined;
+}
+
+function readString(data: Record<string, unknown>, ...keys: string[]): string {
+  const value = readField(data, ...keys);
+  if (value === undefined) {
+    return "";
+  }
+  return String(value);
+}
+
+function readNumber(data: Record<string, unknown>, ...keys: string[]): number {
+  const value = readField(data, ...keys);
+  if (value === undefined) {
+    return 0;
+  }
+  if (typeof value === "object" && value !== null && "toNumber" in value) {
+    return (value as { toNumber: () => number }).toNumber();
+  }
+  return Number(value);
+}
+
+function toByteArray(value: unknown): Uint8Array | null {
+  if (value instanceof Uint8Array) {
+    return value;
+  }
+  if (Array.isArray(value) && value.every((entry) => typeof entry === "number")) {
+    return Uint8Array.from(value as number[]);
+  }
+  return null;
+}
 
 function encodePubkey(value: unknown): string {
   if (value instanceof PublicKey) {
     return value.toBase58();
   }
-  if (value instanceof Uint8Array) {
-    return bs58.encode(value);
+  const bytes = toByteArray(value);
+  if (bytes !== null) {
+    return bs58.encode(bytes);
   }
   return String(value);
 }
 
 function encodeBytes32(value: unknown): string {
-  if (value instanceof Uint8Array) {
-    return bs58.encode(value);
+  const bytes = toByteArray(value);
+  if (bytes !== null) {
+    return bs58.encode(bytes);
   }
-  return String(value);
+  if (typeof value === "string") {
+    return value;
+  }
+  return "";
 }
 
 function mapAnchorEvent(
   name: string,
   data: Record<string, unknown>,
 ): ParsedChainEvent["payload"] | null {
-  const eventType = ANCHOR_EVENT_TO_CANONICAL[name];
+  const eventType = resolveCanonicalEventType(name);
   if (!eventType) {
     return null;
   }
@@ -52,43 +99,55 @@ function mapAnchorEvent(
   switch (eventType) {
     case "ProposalCreated":
       return {
-        proposal_id: String(data.proposalId ?? ""),
-        title: String(data.title ?? ""),
-        options: Array.isArray(data.options) ? data.options.map(String) : [],
-        commit_ends_at: Number(data.commitEndsAt ?? 0),
-        reveal_ends_at: Number(data.revealEndsAt ?? 0),
-        phase: String(data.phase ?? "commit"),
-        electorate_merkle_root: encodeBytes32(data.electorateMerkleRoot),
-        electorate_registry_version: Number(data.electorateRegistryVersion ?? 0),
-        electorate_snapshot_slot: Number(data.electorateSnapshotSlot ?? 0),
+        proposal_id: readString(data, "proposal_id", "proposalId"),
+        title: readString(data, "title"),
+        options: Array.isArray(readField(data, "options"))
+          ? (readField(data, "options") as unknown[]).map(String)
+          : [],
+        commit_ends_at: readNumber(data, "commit_ends_at", "commitEndsAt"),
+        reveal_ends_at: readNumber(data, "reveal_ends_at", "revealEndsAt"),
+        phase: readString(data, "phase") || "commit",
+        electorate_merkle_root: encodeBytes32(
+          readField(data, "electorate_merkle_root", "electorateMerkleRoot"),
+        ),
+        electorate_registry_version: readNumber(
+          data,
+          "electorate_registry_version",
+          "electorateRegistryVersion",
+        ),
+        electorate_snapshot_slot: readNumber(
+          data,
+          "electorate_snapshot_slot",
+          "electorateSnapshotSlot",
+        ),
       };
     case "VoteCommitted":
       return {
-        proposal_id: String(data.proposalId ?? ""),
-        voter_pubkey: encodePubkey(data.voterPubkey),
-        commitment: encodeBytes32(data.commitment),
+        proposal_id: readString(data, "proposal_id", "proposalId"),
+        voter_pubkey: encodePubkey(readField(data, "voter_pubkey", "voterPubkey")),
+        commitment: encodeBytes32(readField(data, "commitment")),
       };
     case "VoteRevealed":
       return {
-        proposal_id: String(data.proposalId ?? ""),
-        option_id: String(data.optionId ?? ""),
-        voter_pubkey: encodePubkey(data.voterPubkey),
+        proposal_id: readString(data, "proposal_id", "proposalId"),
+        option_id: readString(data, "option_id", "optionId"),
+        voter_pubkey: encodePubkey(readField(data, "voter_pubkey", "voterPubkey")),
       };
     case "ProposalClosed":
     case "ProposalFinalized":
       return {
-        proposal_id: String(data.proposalId ?? ""),
+        proposal_id: readString(data, "proposal_id", "proposalId"),
       };
     case "EligibleVotersRootUpdated":
       return {
-        merkle_root: encodeBytes32(data.merkleRoot),
-        registry_version: Number(data.registryVersion ?? 0),
-        list_hash: encodeBytes32(data.listHash),
+        merkle_root: encodeBytes32(readField(data, "merkle_root", "merkleRoot")),
+        registry_version: readNumber(data, "registry_version", "registryVersion"),
+        list_hash: encodeBytes32(readField(data, "list_hash", "listHash")),
       };
     case "VoterEligibilityGranted":
     case "VoterEligibilityRevoked":
       return {
-        voter_pubkey: encodePubkey(data.voterPubkey),
+        voter_pubkey: encodePubkey(readField(data, "voter_pubkey", "voterPubkey")),
       };
     default:
       return null;
@@ -103,7 +162,7 @@ export function parseAnchorProgramLogs(
   const events: ParsedChainEvent[] = [];
 
   for (const decoded of parser.parseLogs(logs)) {
-    const eventType = ANCHOR_EVENT_TO_CANONICAL[decoded.name];
+    const eventType = resolveCanonicalEventType(decoded.name);
     if (!eventType) {
       continue;
     }
