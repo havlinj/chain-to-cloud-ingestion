@@ -1,0 +1,24 @@
+{
+  "name": "eligibility-admin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Admin CLI: voter list Merkle root, list_hash, and on-chain eligibility registry updates",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "0.32.1",
+    "@noble/hashes": "1.4.0",
+    "@solana/web3.js": "1.95.4"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.1",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}
