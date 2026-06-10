@@ -1,10 +1,12 @@
 {
   "name": "chain-to-cloud-ingestion",
   "private": true,
-  "description": "Repository root tooling (formatting)",
+  "description": "Repository root tooling (formatting, dependency audit)",
   "scripts": {
     "format": "prettier --write services/ingestion tools/eligibility-admin smart-contract/tests",
-    "format:check": "prettier --check services/ingestion tools/eligibility-admin smart-contract/tests"
+    "format:check": "prettier --check services/ingestion tools/eligibility-admin smart-contract/tests",
+    "audit": "bash scripts/audit-deps.sh",
+    "audit:production": "bash scripts/audit-ingestion-production.sh"
   },
   "devDependencies": {
     "prettier": "3.5.3"

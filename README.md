@@ -189,6 +189,25 @@ Schema evolution is additive only (new fields OK; no breaking renames). See `.cu
 
 ---
 
+## Developer tooling (repo root)
+
+```bash
+npm install          # root dev tools (Prettier)
+npm run format       # Prettier on all TypeScript projects
+npm run format:check # CI-style format check
+npm run audit        # npm audit (3 TS packages) + govulncheck + cargo audit when installed
+npm run audit:production  # Ingestion Lambda runtime deps only
+```
+
+Optional installs for full audit coverage:
+
+```bash
+go install golang.org/x/vuln/cmd/govulncheck@latest
+cargo install cargo-audit
+```
+
+---
+
 ## Key References
 
 - **Architecture and event bus:** `.cursor/rules/architecture.mdc`, `.cursor/rules/service_boundaries.mdc`, `.cursor/rules/system_context.mdc`

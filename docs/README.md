@@ -24,6 +24,6 @@ Process for ADRs: `.cursor/rules/adr_process.mdc`.
 
 ## Current pointers
 
-- **Active direction:** [`planning/agreed_direction_skip_votecast.md`](planning/agreed_direction_skip_votecast.md)
+- **Active direction:** [`planning/agreed_direction_skip_votecast.md`](planning/agreed_direction_skip_votecast.md), [`planning/deferred_dependency_audit_and_ci.md`](planning/deferred_dependency_audit_and_ci.md)
 - **Decisions (review status):** [`ADR/README.md`](ADR/README.md)
 - **Latest session recap:** [`progress/session_15.md`](progress/session_15.md)

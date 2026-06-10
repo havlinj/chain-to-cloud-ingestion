@@ -14,3 +14,4 @@ Then remove or archive planning notes that only duplicate the ADR.
 | Document | Summary |
 |----------|---------|
 | [agreed_direction_skip_votecast.md](agreed_direction_skip_votecast.md) | Skip VoteCast placeholder contract; first on-chain model = commit–reveal; align Ingestion/Aggregator in one wave. |
+| [deferred_dependency_audit_and_ci.md](deferred_dependency_audit_and_ci.md) | Audit/format CI scaffolding exists; full audit run and CI gates deferred until after devnet pipeline slice. |

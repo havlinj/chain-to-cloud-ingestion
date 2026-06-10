@@ -21,6 +21,12 @@ Continue Phase 3 step 4 per `development_plan.mdc` and Session 14 next steps: ad
 - **Prettier** at repo root (`.prettierrc.json`, `npm run format` / `format:check`) for `services/ingestion/`, `tools/eligibility-admin/`, `smart-contract/tests/`.
 - **`gofmt`** on `services/aggregator/`; **`cargo fmt`** on `smart-contract/`; existing **`terraform fmt`** unchanged (already clean).
 
+### Repo dependency audit (scaffolding only)
+
+- **`scripts/audit-deps.sh`**, **`scripts/audit-ingestion-production.sh`**, root **`npm run audit`** / **`audit:production`**; per-package **`npm run audit`**.
+- Documented in root **`README.md`** (Developer tooling).
+- **Execution deferred** until after devnet pipeline slice — see [`docs/planning/deferred_dependency_audit_and_ci.md`](../planning/deferred_dependency_audit_and_ci.md).
+
 ## Verification
 
 ```bash
@@ -44,19 +50,20 @@ npm run format:check
 
 ## Not Done This Session
 
-1. **Devnet + AWS E2E** — deployed ingestion Lambda, SNS/SQS, DynamoDB.
-2. **Self-audit workshop** — after on-chain surface stable (step 9).
+1. **Devnet + AWS E2E slice** — chain tx → Ingestion → SNS/SQS → Aggregator/DynamoDB (Phase 3 step 7).
+2. **Self-audit workshop** — after E2E slice and on-chain surface stable (step 9).
 3. gRPC read API, Aggregator eligibility audit projection.
-4. CI workflow for `tools/eligibility-admin` tests and `npm run format:check`.
+4. Dependency audit **triage** and CI gates (deferred; tooling ready).
 
 ## Next Steps
 
-1. Devnet + AWS pipeline slice (commit → reveal → finalize through real event bus).
-2. Optional: CI job for `tools/eligibility-admin` `npm test`.
-3. Self-audit workshop when ready.
+1. **Devnet + AWS pipeline slice** — deploy or use devnet program; real events through Ingestion and Aggregator; verify commit → reveal → finalize lifecycle.
+2. **Self-audit workshop** — schedule after slice is green (`development_plan.mdc` step 9).
+3. **Later:** run `npm run audit` + triage; CI for `format:check` and audit policy per [`deferred_dependency_audit_and_ci.md`](../planning/deferred_dependency_audit_and_ci.md).
 
 ## References
 
 - `docs/progress/session_14.md`
 - `docs/ADR/0001-electorate-enumeration-canonical-list.md`
-- `.cursor/rules/development_plan.mdc` Phase 3 step 4
+- `docs/planning/deferred_dependency_audit_and_ci.md`
+- `.cursor/rules/development_plan.mdc` Phase 3 steps 4, 7, 9

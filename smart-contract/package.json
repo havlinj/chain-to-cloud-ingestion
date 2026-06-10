@@ -5,7 +5,8 @@
   "scripts": {
     "test": "ts-mocha -p ./tsconfig.json -t 1000000 tests/voting.ts tests/voting-coverage.ts tests/voting-events.ts",
     "format": "prettier --write tests",
-    "format:check": "prettier --check tests"
+    "format:check": "prettier --check tests",
+    "audit": "npm audit"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.32.1",
