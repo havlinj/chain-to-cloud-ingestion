@@ -1,11 +1,9 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::{MAX_OPTION_LEN, MAX_OPTIONS, MAX_PROPOSAL_ID_LEN, MAX_TITLE_LEN};
+use crate::constants::{MAX_OPTIONS, MAX_OPTION_LEN, MAX_PROPOSAL_ID_LEN, MAX_TITLE_LEN};
 use crate::errors::VotingError;
 use crate::events::{ProposalClosed, ProposalCreated, ProposalFinalized};
-use crate::state::{
-    CloseProposal, CreateProposal, FinalizeProposal, ProposalPhase, ProgramConfig,
-};
+use crate::state::{CloseProposal, CreateProposal, FinalizeProposal, ProgramConfig, ProposalPhase};
 
 fn validate_proposal_id(proposal_id: &str) -> Result<()> {
     require!(

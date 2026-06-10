@@ -50,14 +50,14 @@ func (r *ProposalsRepository) ApplyProposalCreated(ctx context.Context, event do
 			"#phase":   "phase",
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":title":           &types.AttributeValueMemberS{Value: event.Title},
-			":options":         &types.AttributeValueMemberSS{Value: event.Options},
-			":phase":           &types.AttributeValueMemberS{Value: phase},
-			":commitEnds":      &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", event.CommitEndsAt)},
-			":revealEnds":      &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", event.RevealEndsAt)},
-			":resultsVisible":  &types.AttributeValueMemberBOOL{Value: false},
-			":counts":          &types.AttributeValueMemberM{Value: countsAV},
-			":ts":              &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", event.Timestamp)},
+			":title":          &types.AttributeValueMemberS{Value: event.Title},
+			":options":        &types.AttributeValueMemberSS{Value: event.Options},
+			":phase":          &types.AttributeValueMemberS{Value: phase},
+			":commitEnds":     &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", event.CommitEndsAt)},
+			":revealEnds":     &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", event.RevealEndsAt)},
+			":resultsVisible": &types.AttributeValueMemberBOOL{Value: false},
+			":counts":         &types.AttributeValueMemberM{Value: countsAV},
+			":ts":             &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", event.Timestamp)},
 		},
 	})
 	if err != nil {
@@ -77,9 +77,9 @@ func (r *ProposalsRepository) ApplyVoteRevealed(ctx context.Context, event domai
 				"ADD #counts.#option :one",
 		),
 		ExpressionAttributeNames: map[string]string{
-			"#phase":   "phase",
-			"#counts":  "option_counts",
-			"#option":  event.OptionID,
+			"#phase":  "phase",
+			"#counts": "option_counts",
+			"#option": event.OptionID,
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":ts":     &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", event.Timestamp)},

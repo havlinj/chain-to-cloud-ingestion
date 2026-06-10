@@ -7,11 +7,7 @@ import votingIdl from "../../idl/voting.json" with { type: "json" };
 const coder = new BorshCoder(votingIdl as Idl);
 const programId = new PublicKey((votingIdl as { address: string }).address);
 
-type AnchorEventName =
-  | "ProposalCreated"
-  | "VoteCommitted"
-  | "VoteRevealed"
-  | "ProposalFinalized";
+type AnchorEventName = "ProposalCreated" | "VoteCommitted" | "VoteRevealed" | "ProposalFinalized";
 
 function encodeAnchorEvent(name: AnchorEventName, data: Record<string, unknown>): string {
   const entry = coder.events.layouts.get(name);
@@ -26,7 +22,7 @@ function encodeAnchorEvent(name: AnchorEventName, data: Record<string, unknown>)
 
 export function buildProgramLogs(
   anchorEventName: AnchorEventName,
-  data: Record<string, unknown>,
+  data: Record<string, unknown>
 ): string[] {
   const program = programId.toBase58();
   return [

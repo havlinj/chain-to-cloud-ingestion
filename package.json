@@ -1,0 +1,12 @@
+{
+  "name": "chain-to-cloud-ingestion",
+  "private": true,
+  "description": "Repository root tooling (formatting)",
+  "scripts": {
+    "format": "prettier --write services/ingestion tools/eligibility-admin smart-contract/tests",
+    "format:check": "prettier --check services/ingestion tools/eligibility-admin smart-contract/tests"
+  },
+  "devDependencies": {
+    "prettier": "3.5.3"
+  }
+}

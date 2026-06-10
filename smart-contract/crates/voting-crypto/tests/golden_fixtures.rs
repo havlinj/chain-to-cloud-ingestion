@@ -5,8 +5,8 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 use voting_crypto::{
-    build_merkle_proof, canonical_list_hash, encode_base58, merkle_leaf,
-    merkle_root_from_pubkeys, verify_merkle_proof, vote_commitment,
+    build_merkle_proof, canonical_list_hash, encode_base58, merkle_leaf, merkle_root_from_pubkeys,
+    verify_merkle_proof, vote_commitment,
 };
 
 fn fixtures_dir() -> PathBuf {
@@ -60,7 +60,10 @@ fn golden_0001_list_hash_and_merkle_root() {
         })
         .collect();
 
-    for (pk, expected_leaf) in pubkeys.iter().zip(golden.merkle_leaves_keccak256_hex.iter()) {
+    for (pk, expected_leaf) in pubkeys
+        .iter()
+        .zip(golden.merkle_leaves_keccak256_hex.iter())
+    {
         assert_eq!(hex::encode(merkle_leaf(pk)), *expected_leaf);
     }
 
@@ -78,9 +81,8 @@ fn golden_0001_list_hash_and_merkle_root() {
 #[test]
 fn golden_0003_vote_commitment() {
     let dir = fixtures_dir();
-    let expected_json =
-        fs::read_to_string(dir.join("golden-0003-vote-commitment-expected.json"))
-            .expect("read expected");
+    let expected_json = fs::read_to_string(dir.join("golden-0003-vote-commitment-expected.json"))
+        .expect("read expected");
     let golden: CommitmentGolden = serde_json::from_str(&expected_json).expect("parse json");
 
     let salt_bytes = hex::decode(&golden.salt_hex).expect("salt hex");

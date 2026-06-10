@@ -24,10 +24,7 @@ const PHASE_COMMIT = "commit";
 const ELECTORATE_MERKLE_ROOT = "11111111111111111111111111111111";
 const PROGRAM_ID = "VotiNG1111111111111111111111111111111111111";
 
-function requireSingleParsed(
-  parsed: ParsedChainEvent[],
-  eventType: string,
-): ParsedChainEvent {
+function requireSingleParsed(parsed: ParsedChainEvent[], eventType: string): ParsedChainEvent {
   if (parsed.length !== 1) {
     throw new Error(`expected one parsed ${eventType}, got ${parsed.length}`);
   }
@@ -47,12 +44,9 @@ function canonicalEventFromAnchorLogs(
   slot: number,
   txSignature: string,
   eventType: string,
-  timestamp: number,
+  timestamp: number
 ) {
-  const parsedEvent = requireSingleParsed(
-    parseProgramLogs(logs, slot, txSignature),
-    eventType,
-  );
+  const parsedEvent = requireSingleParsed(parseProgramLogs(logs, slot, txSignature), eventType);
   return normalizeChainEvent(parsedEvent, 0, SOURCE, VERSION, timestamp);
 }
 
@@ -79,13 +73,7 @@ describe("pipeline E2E — parseProgramLogs + normalizeChainEvent", () => {
       slot: new anchor.BN(slot),
     });
 
-    const normalized = canonicalEventFromAnchorLogs(
-      logs,
-      slot,
-      txSignature,
-      eventType,
-      timestamp,
-    );
+    const normalized = canonicalEventFromAnchorLogs(logs, slot, txSignature, eventType, timestamp);
 
     expect(normalized.event_id).toBe(buildEventId(txSignature, eventType, 0));
     expect(normalized.event_type).toBe(eventType);
@@ -118,13 +106,7 @@ describe("pipeline E2E — parseProgramLogs + normalizeChainEvent", () => {
       slot: new anchor.BN(slot),
     });
 
-    const normalized = canonicalEventFromAnchorLogs(
-      logs,
-      slot,
-      txSignature,
-      eventType,
-      timestamp,
-    );
+    const normalized = canonicalEventFromAnchorLogs(logs, slot, txSignature, eventType, timestamp);
 
     expect(normalized.event_id).toBe(buildEventId(txSignature, eventType, 0));
     expect(normalized.event_type).toBe(eventType);
@@ -151,13 +133,7 @@ describe("pipeline E2E — parseProgramLogs + normalizeChainEvent", () => {
       slot: new anchor.BN(slot),
     });
 
-    const normalized = canonicalEventFromAnchorLogs(
-      logs,
-      slot,
-      txSignature,
-      eventType,
-      timestamp,
-    );
+    const normalized = canonicalEventFromAnchorLogs(logs, slot, txSignature, eventType, timestamp);
 
     expect(normalized.event_id).toBe(buildEventId(txSignature, eventType, 0));
     expect(normalized.event_type).toBe(eventType);
@@ -182,13 +158,7 @@ describe("pipeline E2E — parseProgramLogs + normalizeChainEvent", () => {
       slot: new anchor.BN(slot),
     });
 
-    const normalized = canonicalEventFromAnchorLogs(
-      logs,
-      slot,
-      txSignature,
-      eventType,
-      timestamp,
-    );
+    const normalized = canonicalEventFromAnchorLogs(logs, slot, txSignature, eventType, timestamp);
 
     expect(normalized.event_id).toBe(buildEventId(txSignature, eventType, 0));
     expect(normalized.event_type).toBe(eventType);

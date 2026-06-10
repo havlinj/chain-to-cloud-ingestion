@@ -7,11 +7,7 @@ import { expect } from "chai";
 import { Keypair, SystemProgram } from "@solana/web3.js";
 
 import { bytesToArray32, merkleLeaf, merkleRoot, voteCommitment } from "./helpers/crypto";
-import {
-  decodeEventsFromSimulation,
-  expectEventNamed,
-  expectPubkeyField,
-} from "./helpers/events";
+import { decodeEventsFromSimulation, expectEventNamed, expectPubkeyField } from "./helpers/events";
 import {
   commitmentPda,
   grantedVoterPda,
@@ -114,23 +110,14 @@ describe("voting program — Anchor event payloads", () => {
       .rpc();
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "a"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "a");
 
     const tx = await program.methods
       .commitVote(bytesToArray32(commitment), [], 0)
       .accounts({
         voter: voter.publicKey,
         proposal,
-        commitmentAccount: commitmentPda(
-          program.programId,
-          proposal,
-          voter.publicKey
-        ),
+        commitmentAccount: commitmentPda(program.programId, proposal, voter.publicKey),
         grantedVoter: null,
         revokedVoter: null,
         systemProgram: SystemProgram.programId,
@@ -138,9 +125,7 @@ describe("voting program — Anchor event payloads", () => {
       .signers([voter])
       .transaction();
 
-    const events = await decodeEventsFromSimulation(provider, program, tx, [
-      voter,
-    ]);
+    const events = await decodeEventsFromSimulation(provider, program, tx, [voter]);
     const evt = expectEventNamed(events, "voteCommitted");
     expect(evt.data.proposalId).to.equal(proposalId);
     expectPubkeyField(evt.data, "voterPubkey", voter.publicKey);
@@ -178,22 +163,13 @@ describe("voting program — Anchor event payloads", () => {
       .rpc();
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "yes"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "yes");
     await program.methods
       .commitVote(bytesToArray32(commitment), [], 0)
       .accounts({
         voter: voter.publicKey,
         proposal,
-        commitmentAccount: commitmentPda(
-          program.programId,
-          proposal,
-          voter.publicKey
-        ),
+        commitmentAccount: commitmentPda(program.programId, proposal, voter.publicKey),
         grantedVoter: null,
         revokedVoter: null,
         systemProgram: SystemProgram.programId,
@@ -208,18 +184,12 @@ describe("voting program — Anchor event payloads", () => {
       .accounts({
         voter: voter.publicKey,
         proposal,
-        commitmentAccount: commitmentPda(
-          program.programId,
-          proposal,
-          voter.publicKey
-        ),
+        commitmentAccount: commitmentPda(program.programId, proposal, voter.publicKey),
       })
       .signers([voter])
       .transaction();
 
-    const events = await decodeEventsFromSimulation(provider, program, tx, [
-      voter,
-    ]);
+    const events = await decodeEventsFromSimulation(provider, program, tx, [voter]);
     const evt = expectEventNamed(events, "voteRevealed");
     expect(evt.data.proposalId).to.equal(proposalId);
     expect(evt.data.optionId).to.equal("yes");
@@ -298,22 +268,13 @@ describe("voting program — Anchor event payloads", () => {
       .rpc();
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "1"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "1");
     await program.methods
       .commitVote(bytesToArray32(commitment), [], 0)
       .accounts({
         voter: voter.publicKey,
         proposal,
-        commitmentAccount: commitmentPda(
-          program.programId,
-          proposal,
-          voter.publicKey
-        ),
+        commitmentAccount: commitmentPda(program.programId, proposal, voter.publicKey),
         grantedVoter: null,
         revokedVoter: null,
         systemProgram: SystemProgram.programId,
@@ -327,11 +288,7 @@ describe("voting program — Anchor event payloads", () => {
       .accounts({
         voter: voter.publicKey,
         proposal,
-        commitmentAccount: commitmentPda(
-          program.programId,
-          proposal,
-          voter.publicKey
-        ),
+        commitmentAccount: commitmentPda(program.programId, proposal, voter.publicKey),
       })
       .signers([voter])
       .rpc();

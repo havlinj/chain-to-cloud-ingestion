@@ -7,12 +7,7 @@ import { Program } from "@coral-xyz/anchor";
 import { expect } from "chai";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 
-import {
-  buildMerkleProof,
-  merkleLeaf,
-  merkleRoot,
-  voteCommitment,
-} from "./helpers/crypto";
+import { buildMerkleProof, merkleLeaf, merkleRoot, voteCommitment } from "./helpers/crypto";
 import { expectAnchorError, expectLogsInclude } from "./helpers/expect";
 import {
   commitmentPda,
@@ -49,9 +44,7 @@ type VotingProgram = Program;
 const ZERO_HASH = new Uint8Array(32);
 
 function leafIndexFor(pubkeys: PublicKey[], voter: PublicKey): number {
-  const sorted = [...pubkeys].sort((a, b) =>
-    Buffer.compare(a.toBuffer(), b.toBuffer())
-  );
+  const sorted = [...pubkeys].sort((a, b) => Buffer.compare(a.toBuffer(), b.toBuffer()));
   const idx = sorted.findIndex((pk) => pk.equals(voter));
   if (idx < 0) {
     throw new Error("voter not in electorate");
@@ -103,31 +96,12 @@ describe("voting coverage — eligibility (grant / revoke / frozen root)", () =>
 
     const proposalId = uniqueProposalId("sl");
     const window = phaseWindow(5, 20);
-    const { proposal } = await createProposal(
-      program,
-      authority,
-      proposalId,
-      ["a", "b"],
-      window
-    );
+    const { proposal } = await createProposal(program, authority, proposalId, ["a", "b"], window);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "a"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "a");
 
-    await commitVote(
-      program,
-      voter,
-      proposal,
-      proposalId,
-      commitment,
-      [],
-      0
-    );
+    await commitVote(program, voter, proposal, proposalId, commitment, [], 0);
 
     await closeProposal(program, authority, proposalId);
   });
@@ -148,23 +122,11 @@ describe("voting coverage — eligibility (grant / revoke / frozen root)", () =>
     );
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "yes"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "yes");
 
-    await commitVote(
-      program,
-      voter,
-      proposal,
-      proposalId,
-      commitment,
-      [],
-      0,
-      { granted: grantedVoterPda(program.programId, voter.publicKey) }
-    );
+    await commitVote(program, voter, proposal, proposalId, commitment, [], 0, {
+      granted: grantedVoterPda(program.programId, voter.publicKey),
+    });
 
     await closeProposal(program, authority, proposalId);
   });
@@ -176,37 +138,17 @@ describe("voting coverage — eligibility (grant / revoke / frozen root)", () =>
 
     const proposalId = uniqueProposalId("gra");
     const window = phaseWindow(5, 20);
-    const { proposal } = await createProposal(
-      program,
-      authority,
-      proposalId,
-      ["a", "b"],
-      window
-    );
+    const { proposal } = await createProposal(program, authority, proposalId, ["a", "b"], window);
 
     await revokeEligibility(program, authority, voter.publicKey);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "a"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "a");
 
-    await commitVote(
-      program,
-      voter,
-      proposal,
-      proposalId,
-      commitment,
-      [],
-      0,
-      {
-        granted: grantedVoterPda(program.programId, voter.publicKey),
-        revoked: revokedVoterPda(program.programId, voter.publicKey),
-      }
-    );
+    await commitVote(program, voter, proposal, proposalId, commitment, [], 0, {
+      granted: grantedVoterPda(program.programId, voter.publicKey),
+      revoked: revokedVoterPda(program.programId, voter.publicKey),
+    });
 
     await closeProposal(program, authority, proposalId);
   });
@@ -219,37 +161,17 @@ describe("voting coverage — eligibility (grant / revoke / frozen root)", () =>
 
     const proposalId = uniqueProposalId("grb");
     const window = phaseWindow(60, 120);
-    const { proposal } = await createProposal(
-      program,
-      authority,
-      proposalId,
-      ["x", "y"],
-      window
-    );
+    const { proposal } = await createProposal(program, authority, proposalId, ["x", "y"], window);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "x"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "x");
 
     await expectAnchorError(
       () =>
-        commitVote(
-          program,
-          voter,
-          proposal,
-          proposalId,
-          commitment,
-          [],
-          0,
-          {
-            granted: grantedVoterPda(program.programId, voter.publicKey),
-            revoked: revokedVoterPda(program.programId, voter.publicKey),
-          }
-        ),
+        commitVote(program, voter, proposal, proposalId, commitment, [], 0, {
+          granted: grantedVoterPda(program.programId, voter.publicKey),
+          revoked: revokedVoterPda(program.programId, voter.publicKey),
+        }),
       "NotEligible"
     );
 
@@ -266,33 +188,23 @@ describe("voting coverage — eligibility (grant / revoke / frozen root)", () =>
       .sort((a, b) => Buffer.compare(a.toBuffer(), b.toBuffer()))
       .map((pk) => merkleLeaf(pk.toBytes()));
     const frozenRoot = merkleRoot(leaves);
-    const proof = buildMerkleProof(leaves, leafIndexFor([voter.publicKey, other.publicKey], voter.publicKey));
+    const proof = buildMerkleProof(
+      leaves,
+      leafIndexFor([voter.publicKey, other.publicKey], voter.publicKey)
+    );
 
     const proposalId = uniqueProposalId("fz");
     const window = phaseWindow(5, 20);
-    const { proposal } = await createProposal(
-      program,
-      authority,
-      proposalId,
-      ["1", "2"],
-      window
-    );
+    const { proposal } = await createProposal(program, authority, proposalId, ["1", "2"], window);
 
     const prop = await program.account.proposal.fetch(proposal);
-    expect(Buffer.from(prop.electorateMerkleRoot)).to.deep.equal(
-      Buffer.from(frozenRoot)
-    );
+    expect(Buffer.from(prop.electorateMerkleRoot)).to.deep.equal(Buffer.from(frozenRoot));
 
     const outsider = Keypair.generate();
     await setupMerkleElectorate(program, authority, [outsider.publicKey]);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "1"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "1");
 
     await commitVote(
       program,
@@ -325,21 +237,10 @@ describe("voting coverage — eligibility (grant / revoke / frozen root)", () =>
 
     const proposalId = uniqueProposalId("bp");
     const window = phaseWindow(60, 120);
-    const { proposal } = await createProposal(
-      program,
-      authority,
-      proposalId,
-      ["a", "b"],
-      window
-    );
+    const { proposal } = await createProposal(program, authority, proposalId, ["a", "b"], window);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "a"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "a");
 
     await expectAnchorError(
       () =>
@@ -366,36 +267,14 @@ describe("voting coverage — eligibility (grant / revoke / frozen root)", () =>
 
     const proposalId = uniqueProposalId("mp");
     const window = phaseWindow(60, 120);
-    const { proposal } = await createProposal(
-      program,
-      authority,
-      proposalId,
-      ["a", "b"],
-      window
-    );
+    const { proposal } = await createProposal(program, authority, proposalId, ["a", "b"], window);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "a"
-    );
-    const oversizedProof = Array.from({ length: 33 }, () =>
-      new Uint8Array(32)
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "a");
+    const oversizedProof = Array.from({ length: 33 }, () => new Uint8Array(32));
 
     await expectAnchorError(
-      () =>
-        commitVote(
-          program,
-          voter,
-          proposal,
-          proposalId,
-          commitment,
-          oversizedProof,
-          0
-        ),
+      () => commitVote(program, voter, proposal, proposalId, commitment, oversizedProof, 0),
       /MerkleProofInvalid|out of range/i
     );
 
@@ -452,16 +331,10 @@ describe("voting coverage — phase deadlines and idempotency", () => {
     await waitUntilUnix(window.commitEndsAt + 1);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "yes"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "yes");
 
     await expectAnchorError(
-      () =>
-        commitVote(program, voter, proposal, proposalId, commitment, [], 0),
+      () => commitVote(program, voter, proposal, proposalId, commitment, [], 0),
       "NotCommitPhase"
     );
 
@@ -471,25 +344,11 @@ describe("voting coverage — phase deadlines and idempotency", () => {
   it("rejects reveal before commit_ends_at", async () => {
     const voter = Keypair.generate();
     await fundKeypair(provider, voter);
-    const { proposal, proposalId, proof, leafIndex, window } =
-      await merkleSetup(voter);
+    const { proposal, proposalId, proof, leafIndex, window } = await merkleSetup(voter);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "yes"
-    );
-    await commitVote(
-      program,
-      voter,
-      proposal,
-      proposalId,
-      commitment,
-      proof,
-      leafIndex
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "yes");
+    await commitVote(program, voter, proposal, proposalId, commitment, proof, leafIndex);
 
     await expectAnchorError(
       () => revealVote(program, voter, proposal, "yes", salt),
@@ -502,36 +361,18 @@ describe("voting coverage — phase deadlines and idempotency", () => {
   it("rejects finalize before reveal_ends_at", async () => {
     const voter = Keypair.generate();
     await fundKeypair(provider, voter);
-    const { proposal, proposalId, proof, leafIndex, window } =
-      await merkleSetup(voter);
+    const { proposal, proposalId, proof, leafIndex, window } = await merkleSetup(voter);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "yes"
-    );
-    await commitVote(
-      program,
-      voter,
-      proposal,
-      proposalId,
-      commitment,
-      proof,
-      leafIndex
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "yes");
+    await commitVote(program, voter, proposal, proposalId, commitment, proof, leafIndex);
 
     await waitUntilUnix(window.commitEndsAt + 1);
     await revealVote(program, voter, proposal, "yes", salt);
 
     const config = programConfigPda(program.programId);
     await expectAnchorError(
-      () =>
-        program.methods
-          .finalizeProposal()
-          .accounts({ proposal, config })
-          .rpc(),
+      () => program.methods.finalizeProposal().accounts({ proposal, config }).rpc(),
       "RevealNotEnded"
     );
 
@@ -544,33 +385,11 @@ describe("voting coverage — phase deadlines and idempotency", () => {
     const { proposal, proposalId, proof, leafIndex } = await merkleSetup(voter);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "yes"
-    );
-    await commitVote(
-      program,
-      voter,
-      proposal,
-      proposalId,
-      commitment,
-      proof,
-      leafIndex
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "yes");
+    await commitVote(program, voter, proposal, proposalId, commitment, proof, leafIndex);
 
     await expectAnchorError(
-      () =>
-        commitVote(
-          program,
-          voter,
-          proposal,
-          proposalId,
-          commitment,
-          proof,
-          leafIndex
-        ),
+      () => commitVote(program, voter, proposal, proposalId, commitment, proof, leafIndex),
       "AlreadyCommitted"
     );
 
@@ -580,25 +399,11 @@ describe("voting coverage — phase deadlines and idempotency", () => {
   it("rejects second reveal (AlreadyRevealed)", async () => {
     const voter = Keypair.generate();
     await fundKeypair(provider, voter);
-    const { proposal, proposalId, proof, leafIndex, window } =
-      await merkleSetup(voter);
+    const { proposal, proposalId, proof, leafIndex, window } = await merkleSetup(voter);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "yes"
-    );
-    await commitVote(
-      program,
-      voter,
-      proposal,
-      proposalId,
-      commitment,
-      proof,
-      leafIndex
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "yes");
+    await commitVote(program, voter, proposal, proposalId, commitment, proof, leafIndex);
 
     await waitUntilUnix(window.commitEndsAt + 1);
     await revealVote(program, voter, proposal, "yes", salt);
@@ -614,26 +419,12 @@ describe("voting coverage — phase deadlines and idempotency", () => {
   it("rejects reveal with unknown option_id", async () => {
     const voter = Keypair.generate();
     await fundKeypair(provider, voter);
-    const { proposal, proposalId, proof, leafIndex, window } =
-      await merkleSetup(voter);
+    const { proposal, proposalId, proof, leafIndex, window } = await merkleSetup(voter);
 
     const unknownOption = "invalid-option";
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      unknownOption
-    );
-    await commitVote(
-      program,
-      voter,
-      proposal,
-      proposalId,
-      commitment,
-      proof,
-      leafIndex
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), unknownOption);
+    await commitVote(program, voter, proposal, proposalId, commitment, proof, leafIndex);
 
     await waitUntilUnix(window.commitEndsAt + 1);
 
@@ -648,13 +439,7 @@ describe("voting coverage — phase deadlines and idempotency", () => {
   it("authority close_proposal sets phase to closed", async () => {
     const proposalId = uniqueProposalId("cl");
     const window = phaseWindow(300, 600);
-    const { proposal } = await createProposal(
-      program,
-      authority,
-      proposalId,
-      ["a", "b"],
-      window
-    );
+    const { proposal } = await createProposal(program, authority, proposalId, ["a", "b"], window);
 
     const registry = voterRegistryPda(program.programId);
     const config = programConfigPda(program.programId);
@@ -692,16 +477,10 @@ describe("voting coverage — phase deadlines and idempotency", () => {
     await closeProposal(program, authority, proposalId);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "yes"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "yes");
 
     await expectAnchorError(
-      () =>
-        commitVote(program, voter, proposal, proposalId, commitment, [], 0),
+      () => commitVote(program, voter, proposal, proposalId, commitment, [], 0),
       "NotCommitPhase"
     );
   });
@@ -722,12 +501,7 @@ describe("voting coverage — phase deadlines and idempotency", () => {
     );
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "yes"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "yes");
     await commitVote(program, voter, proposal, proposalId, commitment, [], 0);
     await closeProposal(program, authority, proposalId);
 
@@ -740,22 +514,12 @@ describe("voting coverage — phase deadlines and idempotency", () => {
   it("rejects finalize after authority close (ProposalNotOpen)", async () => {
     const proposalId = uniqueProposalId("fc");
     const window = phaseWindow(300, 600);
-    const { proposal } = await createProposal(
-      program,
-      authority,
-      proposalId,
-      ["a", "b"],
-      window
-    );
+    const { proposal } = await createProposal(program, authority, proposalId, ["a", "b"], window);
     await closeProposal(program, authority, proposalId);
 
     const config = programConfigPda(program.programId);
     await expectAnchorError(
-      () =>
-        program.methods
-          .finalizeProposal()
-          .accounts({ proposal, config })
-          .rpc(),
+      () => program.methods.finalizeProposal().accounts({ proposal, config }).rpc(),
       "ProposalNotOpen"
     );
   });
@@ -776,12 +540,7 @@ describe("voting coverage — phase deadlines and idempotency", () => {
     );
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "yes"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "yes");
     await commitVote(program, voter, proposal, proposalId, commitment, [], 0);
 
     await waitUntilUnix(window.commitEndsAt + 1);
@@ -1091,16 +850,8 @@ describe("voting coverage — tally and instruction logs", () => {
     const reveals: { voter: Keypair; salt: Uint8Array }[] = [];
     for (const voter of [voter1, voter2]) {
       const salt = Keypair.generate().secretKey.slice(0, 32);
-      const commitment = voteCommitment(
-        proposalId,
-        salt,
-        voter.publicKey.toBytes(),
-        "alpha"
-      );
-      const proof = buildMerkleProof(
-        leaves,
-        leafIndexFor(electorate, voter.publicKey)
-      );
+      const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "alpha");
+      const proof = buildMerkleProof(leaves, leafIndexFor(electorate, voter.publicKey));
       await commitVote(
         program,
         voter,
@@ -1166,12 +917,7 @@ describe("voting coverage — tally and instruction logs", () => {
     await provider.sendAndConfirm(createTx);
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "1"
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "1");
     const commitTx = await program.methods
       .commitVote(
         Array.from(commitment),
@@ -1181,11 +927,7 @@ describe("voting coverage — tally and instruction logs", () => {
       .accounts({
         voter: voter.publicKey,
         proposal,
-        commitmentAccount: commitmentPda(
-          program.programId,
-          proposal,
-          voter.publicKey
-        ),
+        commitmentAccount: commitmentPda(program.programId, proposal, voter.publicKey),
         grantedVoter: null,
         revokedVoter: null,
         systemProgram: SystemProgram.programId,
@@ -1204,11 +946,7 @@ describe("voting coverage — tally and instruction logs", () => {
       .accounts({
         voter: voter.publicKey,
         proposal,
-        commitmentAccount: commitmentPda(
-          program.programId,
-          proposal,
-          voter.publicKey
-        ),
+        commitmentAccount: commitmentPda(program.programId, proposal, voter.publicKey),
       })
       .signers([voter])
       .transaction();

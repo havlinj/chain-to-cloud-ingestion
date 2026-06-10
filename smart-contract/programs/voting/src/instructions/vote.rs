@@ -19,7 +19,10 @@ pub fn commit_vote(
     );
 
     let proposal = &ctx.accounts.proposal;
-    require!(proposal.phase == ProposalPhase::Commit, VotingError::NotCommitPhase);
+    require!(
+        proposal.phase == ProposalPhase::Commit,
+        VotingError::NotCommitPhase
+    );
 
     let now = Clock::get()?.unix_timestamp;
     require!(now < proposal.commit_ends_at, VotingError::NotCommitPhase);
@@ -73,12 +76,7 @@ pub fn reveal_vote(ctx: Context<RevealVote>, option_id: String, salt: [u8; 32]) 
     require!(!commitment_account.revealed, VotingError::AlreadyRevealed);
 
     let voter_bytes = ctx.accounts.voter.key().to_bytes();
-    let expected = vote_commitment(
-        &proposal.proposal_id,
-        &salt,
-        &voter_bytes,
-        &option_id,
-    );
+    let expected = vote_commitment(&proposal.proposal_id, &salt, &voter_bytes, &option_id);
     require!(
         expected == commitment_account.commitment,
         VotingError::InvalidReveal

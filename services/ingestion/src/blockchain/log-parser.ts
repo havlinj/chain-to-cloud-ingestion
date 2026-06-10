@@ -4,7 +4,7 @@ import { parseAnchorProgramLogs } from "./anchor-events.js";
 export function parseProgramLogs(
   logs: string[],
   slot: number,
-  txSignature: string,
+  txSignature: string
 ): ParsedChainEvent[] {
   return parseAnchorProgramLogs(logs, slot, txSignature);
 }

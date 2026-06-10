@@ -12,11 +12,11 @@ export async function runIngestionCycle(
   config: IngestionConfig,
   fetcher: ChainEventFetcher,
   publisher: EventPublisher,
-  nowSeconds: number = Math.floor(Date.now() / 1000),
+  nowSeconds: number = Math.floor(Date.now() / 1000)
 ): Promise<IngestionResult> {
   const parsedEvents = await fetcher.fetchRecentEvents(
     config.solanaProgramId,
-    config.lookbackSlots,
+    config.lookbackSlots
   );
 
   let published = 0;
@@ -32,7 +32,7 @@ export async function runIngestionCycle(
       index,
       config.eventSource,
       config.eventVersion,
-      nowSeconds,
+      nowSeconds
     );
 
     await publisher.publish(normalized);

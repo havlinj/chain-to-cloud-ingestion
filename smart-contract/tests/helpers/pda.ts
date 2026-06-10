@@ -15,10 +15,7 @@ export function programConfigPda(programId: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync([SEED_PROGRAM_CONFIG], programId)[0];
 }
 
-export function proposalPda(
-  programId: PublicKey,
-  proposalId: string
-): PublicKey {
+export function proposalPda(programId: PublicKey, proposalId: string): PublicKey {
   return PublicKey.findProgramAddressSync(
     [SEED_PROPOSAL, Buffer.from(proposalId, "utf8")],
     programId
@@ -36,22 +33,10 @@ export function commitmentPda(
   )[0];
 }
 
-export function grantedVoterPda(
-  programId: PublicKey,
-  voter: PublicKey
-): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [SEED_GRANTED, voter.toBuffer()],
-    programId
-  )[0];
+export function grantedVoterPda(programId: PublicKey, voter: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync([SEED_GRANTED, voter.toBuffer()], programId)[0];
 }
 
-export function revokedVoterPda(
-  programId: PublicKey,
-  voter: PublicKey
-): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [SEED_REVOKED, voter.toBuffer()],
-    programId
-  )[0];
+export function revokedVoterPda(programId: PublicKey, voter: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync([SEED_REVOKED, voter.toBuffer()], programId)[0];
 }

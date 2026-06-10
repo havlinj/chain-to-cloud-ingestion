@@ -75,11 +75,7 @@ pub mod voting {
         instructions::vote::commit_vote(ctx, commitment, merkle_proof, leaf_index)
     }
 
-    pub fn reveal_vote(
-        ctx: Context<RevealVote>,
-        option_id: String,
-        salt: [u8; 32],
-    ) -> Result<()> {
+    pub fn reveal_vote(ctx: Context<RevealVote>, option_id: String, salt: [u8; 32]) -> Result<()> {
         instructions::vote::reveal_vote(ctx, option_id, salt)
     }
 

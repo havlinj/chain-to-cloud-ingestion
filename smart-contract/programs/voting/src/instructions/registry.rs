@@ -19,10 +19,7 @@ pub fn initialize_registry(ctx: Context<InitializeRegistry>, merkle_root: [u8; 3
     Ok(())
 }
 
-pub fn transfer_authority(
-    ctx: Context<TransferAuthority>,
-    new_authority: Pubkey,
-) -> Result<()> {
+pub fn transfer_authority(ctx: Context<TransferAuthority>, new_authority: Pubkey) -> Result<()> {
     ctx.accounts.registry.authority = new_authority;
     Ok(())
 }
@@ -51,10 +48,7 @@ pub fn update_merkle_root(
 
 pub fn grant_eligibility(ctx: Context<GrantEligibility>) -> Result<()> {
     let granted = &mut ctx.accounts.granted;
-    require!(
-        granted.granted_at_slot == 0,
-        VotingError::AlreadyGranted
-    );
+    require!(granted.granted_at_slot == 0, VotingError::AlreadyGranted);
 
     let slot = Clock::get()?.slot;
     granted.voter = ctx.accounts.voter.key();
@@ -70,10 +64,7 @@ pub fn grant_eligibility(ctx: Context<GrantEligibility>) -> Result<()> {
 
 pub fn revoke_eligibility(ctx: Context<RevokeEligibility>) -> Result<()> {
     let revoked = &mut ctx.accounts.revoked;
-    require!(
-        revoked.revoked_at_slot == 0,
-        VotingError::AlreadyRevoked
-    );
+    require!(revoked.revoked_at_slot == 0, VotingError::AlreadyRevoked);
 
     let slot = Clock::get()?.slot;
     revoked.voter = ctx.accounts.voter.key();

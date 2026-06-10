@@ -12,12 +12,7 @@ import {
   voteCommitment,
 } from "./helpers/crypto";
 import { loadCommitmentGolden, loadElectorateGolden } from "./helpers/fixtures";
-import {
-  commitmentPda,
-  programConfigPda,
-  proposalPda,
-  voterRegistryPda,
-} from "./helpers/pda";
+import { commitmentPda, programConfigPda, proposalPda, voterRegistryPda } from "./helpers/pda";
 import {
   closeActiveProposalIfAny,
   closeProposal,
@@ -33,16 +28,12 @@ type VotingProgram = Program;
 const ZERO_HASH = new Uint8Array(32);
 
 function sortedLeaves(pubkeys: PublicKey[]): Uint8Array[] {
-  const sorted = [...pubkeys].sort((a, b) =>
-    Buffer.compare(a.toBuffer(), b.toBuffer())
-  );
+  const sorted = [...pubkeys].sort((a, b) => Buffer.compare(a.toBuffer(), b.toBuffer()));
   return sorted.map((pk) => merkleLeaf(pk.toBytes()));
 }
 
 function leafIndexFor(pubkeys: PublicKey[], voter: PublicKey): number {
-  const sorted = [...pubkeys].sort((a, b) =>
-    Buffer.compare(a.toBuffer(), b.toBuffer())
-  );
+  const sorted = [...pubkeys].sort((a, b) => Buffer.compare(a.toBuffer(), b.toBuffer()));
   const idx = sorted.findIndex((pk) => pk.equals(voter));
   if (idx < 0) {
     throw new Error("voter not in electorate");
@@ -92,10 +83,7 @@ describe("voting program", () => {
     const electorate = [voter1.publicKey, voter2.publicKey];
     const leaves = sortedLeaves(electorate);
     const root = merkleRoot(leaves);
-    const proof1 = buildMerkleProof(
-      leaves,
-      leafIndexFor(electorate, voter1.publicKey)
-    );
+    const proof1 = buildMerkleProof(leaves, leafIndexFor(electorate, voter1.publicKey));
 
     await setMerkleRoot(program, authority, root, ZERO_HASH);
     await fundKeypair(provider, voter1);
@@ -128,18 +116,9 @@ describe("voting program", () => {
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
     const optionId = "1";
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter1.publicKey.toBytes(),
-      optionId
-    );
+    const commitment = voteCommitment(proposalId, salt, voter1.publicKey.toBytes(), optionId);
 
-    const commitmentAccount = commitmentPda(
-      program.programId,
-      proposal,
-      voter1.publicKey
-    );
+    const commitmentAccount = commitmentPda(program.programId, proposal, voter1.publicKey);
 
     await program.methods
       .commitVote(
@@ -205,13 +184,7 @@ describe("voting program", () => {
 
     const now = Math.floor(Date.now() / 1000);
     await program.methods
-      .createProposal(
-        proposalId,
-        "Eligibility",
-        ["yes", "no"],
-        new BN(now + 60),
-        new BN(now + 120)
-      )
+      .createProposal(proposalId, "Eligibility", ["yes", "no"], new BN(now + 60), new BN(now + 120))
       .accounts({
         authority: authority.publicKey,
         registry,
@@ -222,17 +195,8 @@ describe("voting program", () => {
       .rpc();
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      outsider.publicKey.toBytes(),
-      "yes"
-    );
-    const commitmentAccount = commitmentPda(
-      program.programId,
-      proposal,
-      outsider.publicKey
-    );
+    const commitment = voteCommitment(proposalId, salt, outsider.publicKey.toBytes(), "yes");
+    const commitmentAccount = commitmentPda(program.programId, proposal, outsider.publicKey);
 
     try {
       await program.methods
@@ -262,10 +226,7 @@ describe("voting program", () => {
     const electorate = [voter.publicKey, voter2.publicKey];
     const leaves = sortedLeaves(electorate);
     const root = merkleRoot(leaves);
-    const proof = buildMerkleProof(
-      leaves,
-      leafIndexFor(electorate, voter.publicKey)
-    );
+    const proof = buildMerkleProof(leaves, leafIndexFor(electorate, voter.publicKey));
 
     await setMerkleRoot(program, authority, root, ZERO_HASH);
     await fundKeypair(provider, voter);
@@ -297,17 +258,8 @@ describe("voting program", () => {
       .rpc();
 
     const salt = Keypair.generate().secretKey.slice(0, 32);
-    const commitment = voteCommitment(
-      proposalId,
-      salt,
-      voter.publicKey.toBytes(),
-      "a"
-    );
-    const commitmentAccount = commitmentPda(
-      program.programId,
-      proposal,
-      voter.publicKey
-    );
+    const commitment = voteCommitment(proposalId, salt, voter.publicKey.toBytes(), "a");
+    const commitmentAccount = commitmentPda(program.programId, proposal, voter.publicKey);
 
     await program.methods
       .commitVote(
@@ -362,13 +314,7 @@ describe("voting program", () => {
     const first = proposalPda(program.programId, firstId);
 
     await program.methods
-      .createProposal(
-        firstId,
-        "First",
-        ["1", "2"],
-        new BN(now + 300),
-        new BN(now + 600)
-      )
+      .createProposal(firstId, "First", ["1", "2"], new BN(now + 300), new BN(now + 600))
       .accounts({
         authority: authority.publicKey,
         registry,
@@ -383,13 +329,7 @@ describe("voting program", () => {
 
     try {
       await program.methods
-        .createProposal(
-          secondId,
-          "Second",
-          ["1", "2"],
-          new BN(now + 300),
-          new BN(now + 600)
-        )
+        .createProposal(secondId, "Second", ["1", "2"], new BN(now + 300), new BN(now + 600))
         .accounts({
           authority: authority.publicKey,
           registry,

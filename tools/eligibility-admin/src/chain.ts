@@ -3,11 +3,7 @@ import { Program } from "@coral-xyz/anchor";
 import { readFileSync } from "fs";
 import { homedir } from "os";
 import { join, resolve } from "path";
-import {
-  Keypair,
-  PublicKey,
-  SystemProgram,
-} from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 
 import { grantedVoterPda, revokedVoterPda, voterRegistryPda } from "./pda.js";
 
@@ -33,8 +29,7 @@ function chainConfigDefaults(): ChainConfig {
 }
 
 function chainConfigFromEnv(): Partial<ChainConfig> {
-  const { SOLANA_RPC_URL, VOTING_PROGRAM_ID, ANCHOR_WALLET, VOTING_IDL_PATH } =
-    process.env;
+  const { SOLANA_RPC_URL, VOTING_PROGRAM_ID, ANCHOR_WALLET, VOTING_IDL_PATH } = process.env;
 
   return {
     ...(SOLANA_RPC_URL !== undefined && { rpcUrl: SOLANA_RPC_URL }),

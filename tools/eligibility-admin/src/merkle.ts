@@ -9,8 +9,7 @@ export function merkleLeaf(pubkey: Uint8Array): Uint8Array {
 }
 
 function pairHash(left: Uint8Array, right: Uint8Array): Uint8Array {
-  const [lo, hi] =
-    Buffer.compare(right, left) < 0 ? [right, left] : [left, right];
+  const [lo, hi] = Buffer.compare(right, left) < 0 ? [right, left] : [left, right];
   return keccak_256(Buffer.concat([Buffer.from(lo), Buffer.from(hi)]));
 }
 
@@ -43,10 +42,7 @@ function siblingAt(level: Uint8Array[], index: number): Uint8Array {
 }
 
 /** Merkle proof for `leafIndex` (matches `voting-crypto::build_merkle_proof`). */
-export function buildMerkleProof(
-  leaves: Uint8Array[],
-  leafIndex: number
-): Uint8Array[] {
+export function buildMerkleProof(leaves: Uint8Array[], leafIndex: number): Uint8Array[] {
   if (leafIndex < 0 || leafIndex >= leaves.length) {
     throw new Error("leaf index out of range");
   }

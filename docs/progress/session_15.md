@@ -12,8 +12,14 @@ Continue Phase 3 step 4 per `development_plan.mdc` and Session 14 next steps: ad
 - **`src/merkle.ts`** — `merkleLeaf`, `merkleRoot`, `buildMerkleProof` (matches `voting-crypto`).
 - **`src/chain.ts`** — Anchor client: `initialize_registry`, `update_merkle_root`, `grant_eligibility`, `revoke_eligibility`.
 - **`src/cli.ts`** — Commands: `build`, `proof`, `init-registry`, `update-root`, `grant`, `revoke`.
-- **`src/electorate.test.ts`** — Golden fixture tests (ADR 0001); no RPC.
+- **`src/electorate.test.ts`** / **`src/chain.test.ts`** — Golden fixtures plus parse and `parseBytes32` error-path tests; no RPC.
 - **`README.md`** — Runbook: canonical list format, env vars, examples.
+- **Follow-up:** slim `ElectorateBuildResult` (canonical bytes + `Uint8Array` roots; hex/base58 via format helpers); per-command `--help` descriptions; layered config merge in `chain.ts`.
+
+### Repo formatting
+
+- **Prettier** at repo root (`.prettierrc.json`, `npm run format` / `format:check`) for `services/ingestion/`, `tools/eligibility-admin/`, `smart-contract/tests/`.
+- **`gofmt`** on `services/aggregator/`; **`cargo fmt`** on `smart-contract/`; existing **`terraform fmt`** unchanged (already clean).
 
 ## Verification
 
@@ -23,6 +29,10 @@ npm install
 npm test
 npm run typecheck
 npm run cli -- build --list ../../smart-contract/tests/fixtures/golden-0001-voter-list-input.txt --json
+
+# repo root
+npm install
+npm run format:check
 ```
 
 ## Architectural Notes
@@ -37,7 +47,7 @@ npm run cli -- build --list ../../smart-contract/tests/fixtures/golden-0001-vote
 1. **Devnet + AWS E2E** — deployed ingestion Lambda, SNS/SQS, DynamoDB.
 2. **Self-audit workshop** — after on-chain surface stable (step 9).
 3. gRPC read API, Aggregator eligibility audit projection.
-4. CI workflow for `tools/eligibility-admin` tests.
+4. CI workflow for `tools/eligibility-admin` tests and `npm run format:check`.
 
 ## Next Steps
 

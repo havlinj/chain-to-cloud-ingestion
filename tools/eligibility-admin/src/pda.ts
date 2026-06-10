@@ -9,15 +9,9 @@ export function voterRegistryPda(programId: PublicKey): PublicKey {
 }
 
 export function grantedVoterPda(programId: PublicKey, voter: PublicKey): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [SEED_GRANTED, voter.toBuffer()],
-    programId
-  )[0];
+  return PublicKey.findProgramAddressSync([SEED_GRANTED, voter.toBuffer()], programId)[0];
 }
 
 export function revokedVoterPda(programId: PublicKey, voter: PublicKey): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [SEED_REVOKED, voter.toBuffer()],
-    programId
-  )[0];
+  return PublicKey.findProgramAddressSync([SEED_REVOKED, voter.toBuffer()], programId)[0];
 }

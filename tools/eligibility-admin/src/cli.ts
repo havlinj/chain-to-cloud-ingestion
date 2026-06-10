@@ -181,7 +181,9 @@ async function cmdInitRegistry(flags: Map<string, string | boolean>): Promise<vo
   console.log(`  authority: ${authority.publicKey.toBase58()}`);
   console.log(`  merkle_root: ${Buffer.from(root).toString("hex")}`);
   if (typeof listHashInput === "string") {
-    console.log(`  list_hash: ${Buffer.from(listHash).toString("hex")} (not stored on init; use update-root)`);
+    console.log(
+      `  list_hash: ${Buffer.from(listHash).toString("hex")} (not stored on init; use update-root)`
+    );
   }
 }
 

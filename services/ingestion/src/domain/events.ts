@@ -86,11 +86,7 @@ export function isEventType(value: string): value is EventType {
   return (EVENT_TYPES as string[]).includes(value);
 }
 
-export function buildEventId(
-  txSignature: string,
-  eventType: EventType,
-  index: number,
-): string {
+export function buildEventId(txSignature: string, eventType: EventType, index: number): string {
   return `${txSignature}:${eventType}:${index}`;
 }
 
@@ -107,7 +103,7 @@ export function normalizeChainEvent(
   index: number,
   source: string,
   version: number,
-  timestamp: number,
+  timestamp: number
 ): VotingEvent {
   if (!isEventType(parsed.event_type)) {
     throw new Error(`unsupported event_type: ${parsed.event_type}`);
@@ -147,9 +143,7 @@ export function normalizeChainEvent(
             ? Number(p.electorate_registry_version)
             : undefined,
         electorate_snapshot_slot:
-          p.electorate_snapshot_slot !== undefined
-            ? Number(p.electorate_snapshot_slot)
-            : undefined,
+          p.electorate_snapshot_slot !== undefined ? Number(p.electorate_snapshot_slot) : undefined,
         slot,
         tx_signature: txSignature,
       };

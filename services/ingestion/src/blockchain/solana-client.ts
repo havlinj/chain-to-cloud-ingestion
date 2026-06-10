@@ -41,11 +41,7 @@ export function createSolanaEventFetcher(rpcUrl: string): ChainEventFetcher {
         }
 
         const slot = signatureInfo.slot;
-        const parsed = parseProgramLogs(
-          tx.meta.logMessages,
-          slot,
-          signatureInfo.signature,
-        );
+        const parsed = parseProgramLogs(tx.meta.logMessages, slot, signatureInfo.signature);
         events.push(...parsed);
       }
 

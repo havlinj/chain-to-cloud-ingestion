@@ -18,11 +18,11 @@ var (
 )
 
 const (
-	EventTypeProposalCreated        = "ProposalCreated"
-	EventTypeVoteCommitted          = "VoteCommitted"
-	EventTypeVoteRevealed           = "VoteRevealed"
-	EventTypeProposalClosed         = "ProposalClosed"
-	EventTypeProposalFinalized      = "ProposalFinalized"
+	EventTypeProposalCreated           = "ProposalCreated"
+	EventTypeVoteCommitted             = "VoteCommitted"
+	EventTypeVoteRevealed              = "VoteRevealed"
+	EventTypeProposalClosed            = "ProposalClosed"
+	EventTypeProposalFinalized         = "ProposalFinalized"
 	EventTypeEligibleVotersRootUpdated = "EligibleVotersRootUpdated"
 	EventTypeVoterEligibilityGranted   = "VoterEligibilityGranted"
 	EventTypeVoterEligibilityRevoked   = "VoterEligibilityRevoked"
@@ -38,17 +38,17 @@ type Envelope struct {
 
 type ProposalCreated struct {
 	Envelope
-	ProposalID                 string   `json:"proposal_id"`
-	Title                      string   `json:"title"`
-	Options                    []string `json:"options"`
-	CommitEndsAt               int64    `json:"commit_ends_at"`
-	RevealEndsAt               int64    `json:"reveal_ends_at"`
-	Phase                      string   `json:"phase"`
-	ElectorateMerkleRoot       string   `json:"electorate_merkle_root,omitempty"`
-	ElectorateRegistryVersion  int64    `json:"electorate_registry_version,omitempty"`
-	ElectorateSnapshotSlot     int64    `json:"electorate_snapshot_slot,omitempty"`
-	Slot                       int64    `json:"slot"`
-	TxSignature                string   `json:"tx_signature"`
+	ProposalID                string   `json:"proposal_id"`
+	Title                     string   `json:"title"`
+	Options                   []string `json:"options"`
+	CommitEndsAt              int64    `json:"commit_ends_at"`
+	RevealEndsAt              int64    `json:"reveal_ends_at"`
+	Phase                     string   `json:"phase"`
+	ElectorateMerkleRoot      string   `json:"electorate_merkle_root,omitempty"`
+	ElectorateRegistryVersion int64    `json:"electorate_registry_version,omitempty"`
+	ElectorateSnapshotSlot    int64    `json:"electorate_snapshot_slot,omitempty"`
+	Slot                      int64    `json:"slot"`
+	TxSignature               string   `json:"tx_signature"`
 }
 
 type VoteCommitted struct {

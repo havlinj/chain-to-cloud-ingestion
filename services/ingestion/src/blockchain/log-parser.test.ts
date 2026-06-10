@@ -7,7 +7,7 @@ describe("parseProgramLogs", () => {
     const events = parseProgramLogs(
       ["Program VotiNG1111111111111111111111111111111111111 invoke [1]"],
       1,
-      "sig",
+      "sig"
     );
     expect(events).toEqual([]);
   });

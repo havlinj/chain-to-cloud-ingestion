@@ -15,10 +15,7 @@ await rm(buildDir, { recursive: true, force: true });
 await mkdir(buildDir, { recursive: true });
 
 await cp(path.join(serviceDir, "dist", "handler.mjs"), path.join(buildDir, "handler.mjs"));
-await writeFile(
-  path.join(buildDir, "package.json"),
-  JSON.stringify({ type: "module" }, null, 2),
-);
+await writeFile(path.join(buildDir, "package.json"), JSON.stringify({ type: "module" }, null, 2));
 
 await execFileAsync("zip", ["-r", zipPath, "."], { cwd: buildDir });
 

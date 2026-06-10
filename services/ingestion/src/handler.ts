@@ -23,7 +23,7 @@ export const handler: Handler = async (): Promise<IngestionResponse> => {
       service: "ingestion",
       fetched: result.fetched,
       published: result.published,
-    }),
+    })
   );
 
   return {

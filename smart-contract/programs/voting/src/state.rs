@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::constants::{
-    MAX_OPTION_LEN, MAX_PROPOSAL_ID_LEN, MAX_TITLE_LEN, SEED_COMMITMENT,
-    SEED_GRANTED, SEED_PROGRAM_CONFIG, SEED_PROPOSAL, SEED_REVOKED, SEED_VOTER_REGISTRY,
+    MAX_OPTION_LEN, MAX_PROPOSAL_ID_LEN, MAX_TITLE_LEN, SEED_COMMITMENT, SEED_GRANTED,
+    SEED_PROGRAM_CONFIG, SEED_PROPOSAL, SEED_REVOKED, SEED_VOTER_REGISTRY,
 };
 use crate::errors::VotingError;
 
@@ -68,8 +68,7 @@ pub struct Proposal {
 
 impl Proposal {
     pub fn space(option_count: usize) -> usize {
-        8
-            + 4
+        8 + 4
             + MAX_PROPOSAL_ID_LEN
             + 4
             + MAX_TITLE_LEN

@@ -17,10 +17,7 @@ import {
 } from "./electorate.js";
 import { buildMerkleProof } from "./merkle.js";
 
-const FIXTURES_DIR = resolve(
-  import.meta.dirname,
-  "../../../smart-contract/tests/fixtures"
-);
+const FIXTURES_DIR = resolve(import.meta.dirname, "../../../smart-contract/tests/fixtures");
 
 interface ElectorateGolden {
   canonical_list_utf8: string;
@@ -69,9 +66,7 @@ describe("electorate", () => {
     for (const voter of golden.pubkeys_base58_sorted) {
       const proofResult = merkleProofForVoter(electorate, voter);
       const proof = buildMerkleProof(electorate.merkleLeaves, proofResult.leafIndex);
-      expect(merkleProofHex(proofResult)).toEqual(
-        proof.map((p) => Buffer.from(p).toString("hex"))
-      );
+      expect(merkleProofHex(proofResult)).toEqual(proof.map((p) => Buffer.from(p).toString("hex")));
       expect(proofResult.leafIndex).toBeGreaterThanOrEqual(0);
       expect(electorate.merkleRoot.length).toBe(32);
     }
@@ -89,9 +84,7 @@ describe("electorate", () => {
   });
 
   it("rejects invalid base58 pubkeys", () => {
-    expect(() => parseVoterListContent("not-valid-base58!!!")).toThrow(
-      /invalid base58 pubkey/
-    );
+    expect(() => parseVoterListContent("not-valid-base58!!!")).toThrow(/invalid base58 pubkey/);
   });
 
   it("ignores blank lines between valid pubkeys", () => {
@@ -104,8 +97,8 @@ describe("electorate", () => {
   it("rejects merkle proof for a voter not in the electorate", () => {
     const golden = loadGolden();
     const electorate = buildElectorate(parseVoterListContent(golden.canonical_list_utf8));
-    expect(() =>
-      merkleProofForVoter(electorate, "11111111111111111111111111111115")
-    ).toThrow(/voter not in electorate/);
+    expect(() => merkleProofForVoter(electorate, "11111111111111111111111111111115")).toThrow(
+      /voter not in electorate/
+    );
   });
 });

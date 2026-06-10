@@ -16,10 +16,7 @@ export function createEventParser(program: VotingProgram): EventParser {
   return new EventParser(program.programId, new BorshCoder(program.idl));
 }
 
-export function decodeEventsFromLogs(
-  program: VotingProgram,
-  logs: string[]
-): DecodedAnchorEvent[] {
+export function decodeEventsFromLogs(program: VotingProgram, logs: string[]): DecodedAnchorEvent[] {
   const parser = createEventParser(program);
   const decoded: DecodedAnchorEvent[] = [];
   for (const event of parser.parseLogs(logs)) {
@@ -60,10 +57,7 @@ export async function decodeEventsFromSimulation(
   return decodeEventsFromLogs(program, logs);
 }
 
-export function expectEventNamed(
-  events: DecodedAnchorEvent[],
-  name: string
-): DecodedAnchorEvent {
+export function expectEventNamed(events: DecodedAnchorEvent[], name: string): DecodedAnchorEvent {
   const hit = events.find((e) => e.name === name);
   expect(hit, `expected Anchor event ${name}`).to.exist;
   return hit!;

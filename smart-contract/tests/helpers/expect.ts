@@ -26,8 +26,7 @@ export async function expectAnchorError(
     const msg = errorMessage(err);
     if (typeof codeOrPattern === "string") {
       const ok = code === codeOrPattern || msg.includes(codeOrPattern);
-      expect(ok, `expected ${codeOrPattern}, got code=${code} msg=${msg}`).to.be
-        .true;
+      expect(ok, `expected ${codeOrPattern}, got code=${code} msg=${msg}`).to.be.true;
       return;
     }
     expect(msg).to.match(codeOrPattern);

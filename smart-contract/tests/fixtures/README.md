@@ -4,11 +4,11 @@ Reference **inputs** and **expected outputs** for tests and for matching admin t
 
 ## Files
 
-| File | Role | Used for |
-|------|------|----------|
-| `golden-0001-voter-list-input.txt` | **Input sample** | Example of the canonical off-chain voter list (what admin publishes); same format as production `list_hash` input |
-| `golden-0001-list-hash-and-merkle-expected.json` | **Expected output** | After processing that `.txt` per ADR 0001: `list_hash`, Merkle leaves, Merkle root |
-| `golden-0003-vote-commitment-expected.json` | **Expected output** | One commit–reveal scenario: SHA-256 commitment digest + base58 (ADR 0003) |
+| File                                             | Role                | Used for                                                                                                          |
+| ------------------------------------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `golden-0001-voter-list-input.txt`               | **Input sample**    | Example of the canonical off-chain voter list (what admin publishes); same format as production `list_hash` input |
+| `golden-0001-list-hash-and-merkle-expected.json` | **Expected output** | After processing that `.txt` per ADR 0001: `list_hash`, Merkle leaves, Merkle root                                |
+| `golden-0003-vote-commitment-expected.json`      | **Expected output** | One commit–reveal scenario: SHA-256 commitment digest + base58 (ADR 0003)                                         |
 
 **Flow (0001):** read `golden-0001-voter-list-input.txt` → compute hashes like admin tooling → assert equals `golden-0001-list-hash-and-merkle-expected.json`.
 

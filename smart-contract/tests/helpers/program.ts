@@ -1,11 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { BN, Program } from "@coral-xyz/anchor";
-import {
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-} from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 
 import { bytesToArray32, merkleLeaf, merkleRoot } from "./crypto";
 import {
@@ -25,10 +20,7 @@ export interface PhaseWindow {
   revealEndsAt: number;
 }
 
-export function phaseWindow(
-  commitSecondsFromNow = 5,
-  revealSecondsFromNow = 20
-): PhaseWindow {
+export function phaseWindow(commitSecondsFromNow = 5, revealSecondsFromNow = 20): PhaseWindow {
   const now = Math.floor(Date.now() / 1000);
   return {
     commitEndsAt: now + commitSecondsFromNow,
@@ -132,11 +124,7 @@ export async function commitVote(
   leafIndex: number,
   grantRevoke?: { granted?: PublicKey; revoked?: PublicKey }
 ): Promise<string> {
-  const commitmentAccount = commitmentPda(
-    program.programId,
-    proposal,
-    voter.publicKey
-  );
+  const commitmentAccount = commitmentPda(program.programId, proposal, voter.publicKey);
 
   return program.methods
     .commitVote(
@@ -163,11 +151,7 @@ export async function revealVote(
   optionId: string,
   salt: Uint8Array
 ): Promise<string> {
-  const commitmentAccount = commitmentPda(
-    program.programId,
-    proposal,
-    voter.publicKey
-  );
+  const commitmentAccount = commitmentPda(program.programId, proposal, voter.publicKey);
 
   return program.methods
     .revealVote(optionId, bytesToArray32(salt))
@@ -219,9 +203,7 @@ export async function setupMerkleElectorate(
   authority: Keypair,
   pubkeys: PublicKey[]
 ): Promise<Uint8Array> {
-  const sorted = [...pubkeys].sort((a, b) =>
-    Buffer.compare(a.toBuffer(), b.toBuffer())
-  );
+  const sorted = [...pubkeys].sort((a, b) => Buffer.compare(a.toBuffer(), b.toBuffer()));
   const leaves = sorted.map((pk) => merkleLeaf(pk.toBytes()));
   const root = merkleRoot(leaves);
   await setMerkleRoot(program, authority, root, new Uint8Array(32));

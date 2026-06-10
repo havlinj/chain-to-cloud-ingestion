@@ -105,13 +105,7 @@ export async function fundKeypair(
   keypair: Keypair,
   sol = 2
 ): Promise<void> {
-  const sig = await provider.connection.requestAirdrop(
-    keypair.publicKey,
-    sol * LAMPORTS_PER_SOL
-  );
+  const sig = await provider.connection.requestAirdrop(keypair.publicKey, sol * LAMPORTS_PER_SOL);
   const latest = await provider.connection.getLatestBlockhash();
-  await provider.connection.confirmTransaction(
-    { signature: sig, ...latest },
-    "confirmed"
-  );
+  await provider.connection.confirmTransaction({ signature: sig, ...latest }, "confirmed");
 }

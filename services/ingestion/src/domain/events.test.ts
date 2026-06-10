@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  buildEventId,
-  normalizeChainEvent,
-  type ParsedChainEvent,
-} from "./events.js";
+import { buildEventId, normalizeChainEvent, type ParsedChainEvent } from "./events.js";
 
 describe("normalizeChainEvent", () => {
   it("adds canonical envelope for VoteCommitted", () => {
@@ -60,8 +56,6 @@ describe("normalizeChainEvent", () => {
       tx_signature: "sig",
     };
 
-    expect(() => normalizeChainEvent(parsed, 0, "voting-contract", 1, 1)).toThrow(
-      "at least two",
-    );
+    expect(() => normalizeChainEvent(parsed, 0, "voting-contract", 1, 1)).toThrow("at least two");
   });
 });

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+target/
+build/
+package-lock.json
+services/ingestion/dist/
+services/ingestion/build/
+tools/eligibility-admin/dist/
+smart-contract/target/

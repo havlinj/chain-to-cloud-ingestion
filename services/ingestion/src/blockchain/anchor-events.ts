@@ -5,9 +5,7 @@ import bs58 from "bs58";
 import { isEventType, type EventType, type ParsedChainEvent } from "../domain/events.js";
 import votingIdl from "../idl/voting.json" with { type: "json" };
 
-const PROGRAM_ID = new PublicKey(
-  (votingIdl as { address: string }).address,
-);
+const PROGRAM_ID = new PublicKey((votingIdl as { address: string }).address);
 
 const coder = new BorshCoder(votingIdl as Idl);
 const parser = new EventParser(PROGRAM_ID, coder);
@@ -89,7 +87,7 @@ function encodeBytes32(value: unknown): string {
 
 function mapAnchorEvent(
   name: string,
-  data: Record<string, unknown>,
+  data: Record<string, unknown>
 ): ParsedChainEvent["payload"] | null {
   const eventType = resolveCanonicalEventType(name);
   if (!eventType) {
@@ -108,17 +106,17 @@ function mapAnchorEvent(
         reveal_ends_at: readNumber(data, "reveal_ends_at", "revealEndsAt"),
         phase: readString(data, "phase") || "commit",
         electorate_merkle_root: encodeBytes32(
-          readField(data, "electorate_merkle_root", "electorateMerkleRoot"),
+          readField(data, "electorate_merkle_root", "electorateMerkleRoot")
         ),
         electorate_registry_version: readNumber(
           data,
           "electorate_registry_version",
-          "electorateRegistryVersion",
+          "electorateRegistryVersion"
         ),
         electorate_snapshot_slot: readNumber(
           data,
           "electorate_snapshot_slot",
-          "electorateSnapshotSlot",
+          "electorateSnapshotSlot"
         ),
       };
     case "VoteCommitted":
@@ -157,7 +155,7 @@ function mapAnchorEvent(
 export function parseAnchorProgramLogs(
   logs: string[],
   slot: number,
-  txSignature: string,
+  txSignature: string
 ): ParsedChainEvent[] {
   const events: ParsedChainEvent[] = [];
 
@@ -166,10 +164,7 @@ export function parseAnchorProgramLogs(
     if (!eventType) {
       continue;
     }
-    const payload = mapAnchorEvent(
-      decoded.name,
-      decoded.data as Record<string, unknown>,
-    );
+    const payload = mapAnchorEvent(decoded.name, decoded.data as Record<string, unknown>);
     if (!payload) {
       continue;
     }
