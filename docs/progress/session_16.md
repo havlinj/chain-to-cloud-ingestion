@@ -2,7 +2,7 @@
 
 ## Context
 
-Continue from Session 15 next step: **devnet + AWS pipeline slice** (Phase 3 step 7). This session delivered **tooling, infrastructure prep, and program-id hygiene** so manual deploy and off-chain consumers share one canonical on-chain program id. The live **devnet → Ingestion → SNS → SQS → Aggregator → DynamoDB** run is still pending.
+Continue from Session 15 next step: **devnet + AWS pipeline slice** (Phase 3 step 7). This session delivered **tooling, infrastructure prep, and program-id hygiene** so manual deploy and off-chain consumers share one canonical on-chain program id. End of session: **CI/CD gap analysis** → **ADR 0004** (phased GitHub Actions) and roadmap updates so **Phase A `ci.yml` is the next-session priority**. The live **devnet → Ingestion → SNS → SQS → Aggregator → DynamoDB** run is still pending.
 
 ## Implementation Summary
 
@@ -51,6 +51,27 @@ The placeholder vanity id `VotiNG111…` had no matching deploy keypair, causing
 - Root `.gitignore`: `**/test-ledger/`, `**/.anchor/`
 - `smart-contract/.gitignore`: `docker-target/` (sandbox/Docker Cargo output)
 
+### CI/CD planning (ADR 0004)
+
+Repo CI was **partial** (Rust subset in `smart-contract.yml`; Terraform on branch `master` only; no Ingestion/Aggregator/format gates). Agreed phased rollout:
+
+| Phase | When | Scope |
+|-------|------|--------|
+| **A** | Next session (priority) | Single `ci.yml`: `format-check`, TS/Go/Rust tests, Terraform validate on `main` |
+| **B** | After devnet E2E slice green | `anchor test`, audit jobs, `terraform plan` |
+| **C** | Phase 4+ | OIDC deploy, E2E in CI |
+
+**Delivered (documentation + local tooling, not CI workflow yet):**
+
+- **`docs/ADR/0004-ci-cd-github-actions.md`** — Accepted
+- **`docs/planning/ci_cd_roadmap.md`** — implementation checklist (A1–A8)
+- **`development_plan.mdc`** — cross-phase CI/CD Roadmap; Phase 3 **step 10**; Phase 1 exit criteria clarified (validate vs plan)
+- **`docs/planning/deferred_dependency_audit_and_ci.md`** — format/test CI **not** deferred; audit jobs remain Phase B
+- **`scripts/format-all.sh`** + root `package.json` (`npm run format` / `format:check`) — Prettier, gofmt, `cargo fmt`, `terraform fmt` across the repo
+- **`README.md`** — format-all usage table
+
+**Not implemented this session:** `.github/workflows/ci.yml` (planned first task of next session).
+
 ## Files or Modules Added (key)
 
 | Area | Paths |
@@ -60,6 +81,8 @@ The placeholder vanity id `VotiNG111…` had no matching deploy keypair, causing
 | Program keypair | `smart-contract/keys/voting-program-keypair.json`, `scripts/ensure-program-keypair.sh` |
 | Runbook | `docs/setup_devnet_pipeline.md` |
 | Gitignore | `.gitignore`, `smart-contract/.gitignore` |
+| CI/CD plan | `docs/ADR/0004-ci-cd-github-actions.md`, `docs/planning/ci_cd_roadmap.md` |
+| Format script | `scripts/format-all.sh`, root `package.json` |
 
 ## Verification
 
@@ -85,11 +108,14 @@ cd infra/aws && terraform fmt -check && terraform validate
 1. `f4c0fcc` — devnet pipeline prep (voting-shared, devnet CLI, AWS wiring)
 2. `bf3c74d` — sync voting program id with canonical deploy keypair
 3. `a9fd628` — ignore Solana validator and Anchor build artifacts
+4. `1a8067e` — document Session 16 progress including program id alignment
+5. `f6e466a` — ADR 0004 phased CI/CD, `format-all.sh`, development roadmap alignment
 
 ## Not Done This Session
 
 1. **Live devnet slice** — deploy program to devnet, run `lifecycle`, `terraform apply`, invoke Ingestion, verify DynamoDB.
-2. Self-audit workshop (Phase 3 step 9).
+2. **CI workflow** — `.github/workflows/ci.yml` Phase A (ADR 0004; next session).
+3. Self-audit workshop (Phase 3 step 9).
 
 ## Next Steps
 
@@ -106,4 +132,7 @@ cd infra/aws && terraform fmt -check && terraform validate
 - `docs/progress/session_15.md`
 - `docs/setup_devnet_pipeline.md`
 - `smart-contract/keys/README.md`
-- `.cursor/rules/development_plan.mdc` Phase 3 step 7
+- `docs/ADR/0004-ci-cd-github-actions.md`
+- `docs/planning/ci_cd_roadmap.md`
+- `docs/planning/deferred_dependency_audit_and_ci.md`
+- `.cursor/rules/development_plan.mdc` — Phase 3 steps 7, 10; CI/CD Roadmap
