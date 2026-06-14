@@ -1,1 +1,7 @@
 node_modules/
+
+# Solana local validator data (solana-test-validator, anchor test)
+**/test-ledger/
+
+# Anchor test artifacts outside smart-contract/.gitignore scope
+**/.anchor/

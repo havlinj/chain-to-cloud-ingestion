@@ -1,6 +1,7 @@
 .venv-fixtures/
 .venv-golden/
 target/
+docker-target/
 **/.anchor/
 test-ledger/
 node_modules/
