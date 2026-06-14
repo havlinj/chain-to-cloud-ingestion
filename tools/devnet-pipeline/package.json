@@ -1,15 +1,14 @@
 {
-  "name": "eligibility-admin",
+  "name": "devnet-pipeline",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Admin CLI: voter list Merkle root, list_hash, and on-chain eligibility registry updates",
+  "description": "Devnet voting lifecycle CLI for AWS pipeline E2E (commit → reveal → finalize)",
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "audit": "npm audit",
     "test": "vitest run",
     "cli": "tsx src/cli.ts"
   },

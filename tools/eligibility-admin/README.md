@@ -4,6 +4,8 @@ Off-chain admin tooling for the **global voter registry**. Builds the canonical 
 
 Specification: [`docs/ADR/0001-electorate-enumeration-canonical-list.md`](../../docs/ADR/0001-electorate-enumeration-canonical-list.md).
 
+Shared crypto/electorate/PDA code: [`../voting-shared/`](../voting-shared/) (also used by `devnet-pipeline`).
+
 ## Prerequisites
 
 - Node.js 20+
@@ -89,11 +91,12 @@ Golden vectors: `smart-contract/tests/fixtures/golden-0001-*`.
 
 ## Tests
 
-```bash
-npm test
-```
+Golden fixture tests (ADR 0001, 0003) live in [`../voting-shared/`](../voting-shared/):
 
-Asserts against golden fixtures in `smart-contract/tests/fixtures/` (no Solana RPC).
+```bash
+cd tools/voting-shared && npm test
+cd tools/eligibility-admin && npm run typecheck
+```
 
 ## Operational notes
 

@@ -14,12 +14,12 @@ import {
   merkleRootHex,
   parseVoterListFile,
   pubkeysBase58Sorted,
-} from "./electorate.js";
+  parseBytes32,
+} from "voting-shared";
 import {
   grantEligibility,
   initializeRegistry,
   loadVotingProgram,
-  parseBytes32,
   resolveChainConfig,
   updateMerkleRoot,
   revokeEligibility,

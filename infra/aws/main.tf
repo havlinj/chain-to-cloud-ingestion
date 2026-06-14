@@ -360,7 +360,8 @@ resource "aws_lambda_function" "aggregator" {
   function_name = "${local.name_prefix}-aggregator"
   role          = aws_iam_role.aggregator.arn
   handler       = "bootstrap"
-  runtime       = "go1.x"
+  runtime       = "provided.al2023"
+  architectures = ["x86_64"]
   filename      = var.aggregator_lambda_zip_path
   memory_size   = var.lambda_memory_mb
   timeout       = var.lambda_timeout_seconds
@@ -385,4 +386,34 @@ resource "aws_lambda_event_source_mapping" "aggregator_sqs" {
   event_source_arn = aws_sqs_queue.aggregator.arn
   function_name    = aws_lambda_function.aggregator[0].function_name
   batch_size       = var.lambda_sqs_batch_size
+}
+
+# ------------------------------------------------------------------------------
+# EventBridge: scheduled Ingestion Lambda polls (optional when zip is set)
+# ------------------------------------------------------------------------------
+
+resource "aws_cloudwatch_event_rule" "ingestion_schedule" {
+  count = var.ingestion_schedule_enabled && length(var.ingestion_lambda_zip_path) > 0 ? 1 : 0
+
+  name                = "${local.name_prefix}-ingestion-schedule"
+  description         = "Poll Solana devnet for voting program events"
+  schedule_expression = "rate(${var.ingestion_schedule_minutes} minute)"
+}
+
+resource "aws_lambda_permission" "ingestion_eventbridge" {
+  count = var.ingestion_schedule_enabled && length(var.ingestion_lambda_zip_path) > 0 ? 1 : 0
+
+  statement_id  = "AllowEventBridgeInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.ingestion[0].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.ingestion_schedule[0].arn
+}
+
+resource "aws_cloudwatch_event_target" "ingestion_schedule" {
+  count = var.ingestion_schedule_enabled && length(var.ingestion_lambda_zip_path) > 0 ? 1 : 0
+
+  rule      = aws_cloudwatch_event_rule.ingestion_schedule[0].name
+  target_id = "ingestion-lambda"
+  arn       = aws_lambda_function.ingestion[0].arn
 }

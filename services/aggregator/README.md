@@ -27,6 +27,16 @@ cd services/aggregator
 go test ./...
 ```
 
+## Lambda package (AWS deploy)
+
+```bash
+chmod +x scripts/package-lambda.sh
+./scripts/package-lambda.sh
+# → aggregator-lambda.zip (provided.al2023 / bootstrap)
+```
+
+See [`docs/setup_devnet_pipeline.md`](../../docs/setup_devnet_pipeline.md) for the devnet + AWS slice.
+
 ## Notes
 
 - Legacy **`VoteCast`** has been removed from active code paths.

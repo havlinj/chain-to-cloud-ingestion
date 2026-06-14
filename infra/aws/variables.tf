@@ -132,3 +132,20 @@ variable "lambda_sqs_batch_size" {
     error_message = "lambda_sqs_batch_size must be between 1 and 10."
   }
 }
+
+variable "ingestion_schedule_enabled" {
+  description = "Create an EventBridge schedule to invoke the Ingestion Lambda. Requires ingestion_lambda_zip_path."
+  type        = bool
+  default     = true
+}
+
+variable "ingestion_schedule_minutes" {
+  description = "EventBridge rate interval in minutes for Ingestion Lambda polling."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.ingestion_schedule_minutes >= 1
+    error_message = "ingestion_schedule_minutes must be at least 1."
+  }
+}

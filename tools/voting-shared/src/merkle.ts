@@ -56,3 +56,24 @@ export function buildMerkleProof(leaves: Uint8Array[], leafIndex: number): Uint8
   }
   return proof;
 }
+
+/** Verify a proof for one leaf against an expected root (matches `voting-crypto::verify_merkle_proof`). */
+export function verifyMerkleProof(
+  leaf: Uint8Array,
+  proof: Uint8Array[],
+  root: Uint8Array,
+  leafIndex: number
+): void {
+  if (proof.length === 0 && !Buffer.from(leaf).equals(Buffer.from(root))) {
+    throw new Error("empty merkle proof");
+  }
+  let computed = leaf;
+  let index = leafIndex;
+  for (const sibling of proof) {
+    computed = index % 2 === 0 ? pairHash(computed, sibling) : pairHash(sibling, computed);
+    index = Math.floor(index / 2);
+  }
+  if (!Buffer.from(computed).equals(Buffer.from(root))) {
+    throw new Error("merkle root mismatch");
+  }
+}

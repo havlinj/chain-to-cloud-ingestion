@@ -4,13 +4,7 @@ import { readFileSync } from "fs";
 import { homedir } from "os";
 import { join, resolve } from "path";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import {
-  bytesToArray32,
-  grantedVoterPda,
-  programConfigPda,
-  revokedVoterPda,
-  voterRegistryPda,
-} from "voting-shared";
+import { bytesToArray32, programConfigPda, voterRegistryPda } from "voting-shared";
 
 type VotingProgram = Program;
 
@@ -26,7 +20,7 @@ export interface ChainConfig {
 
 function chainConfigDefaults(): ChainConfig {
   return {
-    rpcUrl: "http://127.0.0.1:8899",
+    rpcUrl: "https://api.devnet.solana.com",
     programId: new PublicKey(DEFAULT_PROGRAM_ID),
     walletPath: join(homedir(), ".config", "solana", "id.json"),
     idlPath: resolve(PACKAGE_ROOT, "../../smart-contract/target/idl/voting.json"),
@@ -62,6 +56,7 @@ function loadWalletKeypair(path: string): Keypair {
 export function loadVotingProgram(config: ChainConfig): {
   program: VotingProgram;
   authority: Keypair;
+  provider: anchor.AnchorProvider;
 } {
   const idl = JSON.parse(readFileSync(config.idlPath, "utf8")) as {
     address?: string;
@@ -76,18 +71,21 @@ export function loadVotingProgram(config: ChainConfig): {
   });
   anchor.setProvider(provider);
   const program = new Program(idl, provider) as VotingProgram;
-  return { program, authority };
+  return { program, authority, provider };
 }
 
-export async function initializeRegistry(
+export async function initializeRegistryIfNeeded(
   program: VotingProgram,
   authority: Keypair,
   merkleRoot: Uint8Array
-): Promise<string> {
+): Promise<boolean> {
   const registry = voterRegistryPda(program.programId);
   const config = programConfigPda(program.programId);
-
-  return program.methods
+  const existing = await program.provider.connection.getAccountInfo(registry);
+  if (existing) {
+    return false;
+  }
+  await program.methods
     .initializeRegistry(bytesToArray32(merkleRoot))
     .accounts({
       authority: authority.publicKey,
@@ -97,6 +95,7 @@ export async function initializeRegistry(
     })
     .signers([authority])
     .rpc();
+  return true;
 }
 
 export async function updateMerkleRoot(
@@ -116,40 +115,29 @@ export async function updateMerkleRoot(
     .rpc();
 }
 
-export async function grantEligibility(
+export async function closeActiveProposalIfAny(
   program: VotingProgram,
-  authority: Keypair,
-  voter: PublicKey
-): Promise<string> {
+  authority: Keypair
+): Promise<void> {
+  const config = programConfigPda(program.programId);
+  const cfg = await program.account.programConfig.fetch(config);
+  if (cfg.activeProposal === null) {
+    return;
+  }
+  const proposal = await program.account.proposal.fetch(cfg.activeProposal);
   const registry = voterRegistryPda(program.programId);
-  return program.methods
-    .grantEligibility()
-    .accounts({
-      authority: authority.publicKey,
-      registry,
-      voter,
-      granted: grantedVoterPda(program.programId, voter),
-      systemProgram: SystemProgram.programId,
-    })
-    .signers([authority])
-    .rpc();
-}
-
-export async function revokeEligibility(
-  program: VotingProgram,
-  authority: Keypair,
-  voter: PublicKey
-): Promise<string> {
-  const registry = voterRegistryPda(program.programId);
-  return program.methods
-    .revokeEligibility()
-    .accounts({
-      authority: authority.publicKey,
-      registry,
-      voter,
-      revoked: revokedVoterPda(program.programId, voter),
-      systemProgram: SystemProgram.programId,
-    })
-    .signers([authority])
-    .rpc();
+  try {
+    await program.methods
+      .closeProposal()
+      .accounts({
+        authority: authority.publicKey,
+        registry,
+        config,
+        proposal: cfg.activeProposal,
+      })
+      .rpc();
+  } catch {
+    // Proposal may already be finalized or closed.
+  }
+  void proposal;
 }

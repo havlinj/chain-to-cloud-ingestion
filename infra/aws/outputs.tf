@@ -72,3 +72,13 @@ output "aggregator_lambda_arn" {
   description = "ARN of the Aggregator Lambda (null if not deployed)."
   value       = length(aws_lambda_function.aggregator) > 0 ? aws_lambda_function.aggregator[0].arn : null
 }
+
+output "ingestion_lambda_function_name" {
+  description = "Name of the Ingestion Lambda (null if not deployed)."
+  value       = length(aws_lambda_function.ingestion) > 0 ? aws_lambda_function.ingestion[0].function_name : null
+}
+
+output "ingestion_schedule_rule_name" {
+  description = "EventBridge rule name for Ingestion polling (null if schedule disabled or Lambda not deployed)."
+  value       = length(aws_cloudwatch_event_rule.ingestion_schedule) > 0 ? aws_cloudwatch_event_rule.ingestion_schedule[0].name : null
+}

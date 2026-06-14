@@ -4,3 +4,16 @@
 environment  = "dev"
 region       = "eu-west-1"
 project_name = "voting"
+
+# Solana devnet (set when deploying Ingestion Lambda)
+solana_rpc_url    = "https://api.devnet.solana.com"
+solana_program_id = "VotiNG1111111111111111111111111111111111111"
+
+# Lambda zip paths (build before apply — see docs/setup_devnet_pipeline.md)
+ingestion_lambda_zip_path  = "../../services/ingestion/ingestion-lambda.zip"
+aggregator_lambda_zip_path = "../../services/aggregator/aggregator-lambda.zip"
+
+# Poll devnet every minute; use scripts/invoke-ingestion-lambda.sh for manual runs
+ingestion_schedule_enabled = true
+ingestion_schedule_minutes = 1
+ingestion_lookback_slots   = 200

@@ -1,9 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { parseBytes32 } from "./chain.js";
+import { bytesToArray32, parseBytes32 } from "./bytes.js";
 
 const ROOT_HEX = "28ba380b3c6003d6d833999c98d92f7976556bd64d4101054d164a1e8deefe92";
 const ROOT_BASE58 = "3jz13vUQLAiWzwsYXCgVVJm7yTWtgWAuUSu1UDpXT1tu";
+
+describe("bytesToArray32", () => {
+  it("converts 32 bytes to a number array", () => {
+    const bytes = Buffer.from(ROOT_HEX, "hex");
+    expect(bytesToArray32(bytes)).toEqual(Array.from(bytes));
+    expect(bytesToArray32(bytes)).toHaveLength(32);
+  });
+
+  it("rejects input that is not 32 bytes", () => {
+    expect(() => bytesToArray32(new Uint8Array(31))).toThrow(/expected 32 bytes/);
+    expect(() => bytesToArray32(new Uint8Array(33))).toThrow(/expected 32 bytes/);
+  });
+});
 
 describe("parseBytes32", () => {
   it("parses 32-byte hex with or without 0x prefix", () => {
