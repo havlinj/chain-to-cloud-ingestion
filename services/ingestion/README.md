@@ -30,4 +30,4 @@ npm run package   # build dist/handler.mjs + ingestion-lambda.zip
 
 Environment variables (see `src/config.ts`): `SNS_TOPIC_ARN`, `SOLANA_RPC_URL`, `SOLANA_PROGRAM_ID`, `LOOKBACK_SLOTS`, `EVENT_SOURCE`, `EVENT_VERSION`.
 
-`SOLANA_PROGRAM_ID` should match the deployed voting program (default in IDL: `VotiNG1111111111111111111111111111111111111`).
+`SOLANA_PROGRAM_ID` should match the deployed voting program (default in IDL: `BbnG5ScQxQrvZVq5FiDEgH7zx8dK6qH9jN3DEUmJSiuc`).

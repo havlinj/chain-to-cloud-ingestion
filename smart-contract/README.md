@@ -11,6 +11,20 @@ Solana **Anchor** program for commit–reveal voting and Merkle voter registry (
 | `tests/` | Anchor integration tests (TypeScript, iteration **2C**) |
 | `tests/fixtures/` | ADR golden JSON/txt (regenerate via `scripts/generate_golden_fixtures.py`) |
 | `Anchor.toml` | Anchor workspace config (devnet/localnet program id) |
+| `keys/voting-program-keypair.json` | Canonical program deploy keypair (committed; see `keys/README.md`) |
+
+## Program id (standard Anchor workflow)
+
+The on-chain program id is the public key of `keys/voting-program-keypair.json`. `declare_id!` in `programs/voting/src/lib.rs` and `[programs.*]` in `Anchor.toml` must stay in sync with that keypair.
+
+```bash
+cd smart-contract
+./scripts/ensure-program-keypair.sh   # copy keys/ → target/deploy/
+anchor keys list                      # verify id
+anchor build
+```
+
+After rotating the keypair: `anchor keys sync`, rebuild, then update ingestion IDL (`services/ingestion/src/idl/voting.json`), Terraform `solana_program_id`, and tool defaults.
 
 ## Run all tests (one script)
 
@@ -39,6 +53,7 @@ Requires Rust **stable**, **Anchor 0.32.1**, and **Solana 3.1.x** (see toolchain
 
 ```bash
 cd smart-contract
+./scripts/ensure-program-keypair.sh
 rustup run stable cargo build -p voting   # host check only
 anchor build                            # SBF artifact in target/deploy/
 ```

@@ -30,7 +30,7 @@ Usage:
 
 Environment:
   SOLANA_RPC_URL       RPC endpoint (default: https://api.devnet.solana.com)
-  VOTING_PROGRAM_ID    Program id (default: VotiNG111… from Anchor.toml)
+  VOTING_PROGRAM_ID    Program id (default from Anchor.toml)
   ANCHOR_WALLET        Authority/voter keypair JSON path
   VOTING_IDL_PATH      Path to voting.json IDL
 

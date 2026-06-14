@@ -7,7 +7,7 @@ project_name = "voting"
 
 # Solana devnet (set when deploying Ingestion Lambda)
 solana_rpc_url    = "https://api.devnet.solana.com"
-solana_program_id = "VotiNG1111111111111111111111111111111111111"
+solana_program_id = "BbnG5ScQxQrvZVq5FiDEgH7zx8dK6qH9jN3DEUmJSiuc"
 
 # Lambda zip paths (build before apply — see docs/setup_devnet_pipeline.md)
 ingestion_lambda_zip_path  = "../../services/ingestion/ingestion-lambda.zip"

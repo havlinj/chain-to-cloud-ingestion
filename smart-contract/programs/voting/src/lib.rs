@@ -12,7 +12,7 @@ pub mod state;
 
 use state::*;
 
-declare_id!("VotiNG1111111111111111111111111111111111111");
+declare_id!("BbnG5ScQxQrvZVq5FiDEgH7zx8dK6qH9jN3DEUmJSiuc");
 
 #[program]
 pub mod voting {

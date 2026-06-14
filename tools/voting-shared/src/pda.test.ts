@@ -11,17 +11,17 @@ import {
 } from "./pda.js";
 
 /** Snapshot addresses for PROGRAM_ID + inputs below (Solana findProgramAddressSync). */
-const PROGRAM_ID = new PublicKey("VotiNG1111111111111111111111111111111111111");
+const PROGRAM_ID = new PublicKey("BbnG5ScQxQrvZVq5FiDEgH7zx8dK6qH9jN3DEUmJSiuc");
 const VOTER = new PublicKey("11111111111111111111111111111112");
 const PROPOSAL_ID = "pipeline-test-1";
 
 const GOLDEN_PDAS = {
-  voterRegistry: "GqPfGvHiUnqnBwRnKbKGrfVhpB969P9wsTyAd8cR8krA",
-  programConfig: "EXECnCYpKcf4LhyQeR9vfA3bR2jFiwcKouiDYHDhPcAF",
-  proposal: "7AVmeXKPwy3dxeVnFvoiWt5Wto4CMJ9mR7xeJuLe7YcC",
-  commitment: "8NkWZwop2iDAexhFSt8yMgsCRDyVaNNXHqJGJc1Frujw",
-  granted: "DgRdn4YeDrJMPZBaMNh7WPooWJ8Xdvyq85SXkeD7vA7v",
-  revoked: "8mcipH554vMXRvckYrxWF9QEDM9oqhwRxpEgDXmTEsnc",
+  voterRegistry: "5Hdxbw1DDq7TBW1mbt4Fin9d4htmEhFhbEi6ePVkpGxT",
+  programConfig: "YDN3LYsY3dqpSeKaatV5fwrHfy6xXfqWwFNCFUshABk",
+  proposal: "12M9BpksbGCdBYHbDmeJS4z5pAJwHec75RoYTcV5fs4A",
+  commitment: "Bp4NRnNweu2py2aLtZXZx6VERuv9p6j8eWRKBTEDkBhK",
+  granted: "8u1dZaj5aiJVx4L1HXf5Cxj1MFAGz4zMMi6p11XoLDDS",
+  revoked: "CyoUFXXmkkeVZwX2yKtWDogtzmwFzVJp2Ae4jGtcmeU8",
 } as const;
 
 describe("voterRegistryPda", () => {

@@ -85,6 +85,10 @@ fi
 
 ensure_wallet
 
+log "Ensuring program keypair (keys/ → target/deploy/)"
+chmod +x scripts/ensure-program-keypair.sh
+./scripts/ensure-program-keypair.sh
+
 log "$ANCHOR_BIN test"
 "$ANCHOR_BIN" test
 

@@ -22,7 +22,7 @@ const COMMITMENT = "2fHb8QiezB2CSfXhwtZ9WaJ81HCtGJhP5eXEbQCwcbuz";
 const TITLE = "Pipeline E2E";
 const PHASE_COMMIT = "commit";
 const ELECTORATE_MERKLE_ROOT = "11111111111111111111111111111111";
-const PROGRAM_ID = "VotiNG1111111111111111111111111111111111111";
+const PROGRAM_ID = "BbnG5ScQxQrvZVq5FiDEgH7zx8dK6qH9jN3DEUmJSiuc";
 
 function requireSingleParsed(parsed: ParsedChainEvent[], eventType: string): ParsedChainEvent {
   if (parsed.length !== 1) {

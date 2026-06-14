@@ -16,9 +16,10 @@ chmod +x scripts/deploy-devnet.sh
 ./scripts/deploy-devnet.sh
 ```
 
-Record the program id (default in `Anchor.toml`: `VotiNG1111111111111111111111111111111111111`). If deploy prints a different id, set it in Terraform and env vars.
+Record the program id printed by the deploy script (canonical value in `Anchor.toml` and `keys/voting-program-keypair.json`). Set the same id in Terraform `solana_program_id` and tool env vars if needed.
 
 ```bash
+./scripts/ensure-program-keypair.sh
 anchor build   # produces target/idl/voting.json for CLI tools
 ```
 

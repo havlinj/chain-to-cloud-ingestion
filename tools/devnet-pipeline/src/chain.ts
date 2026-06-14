@@ -8,7 +8,7 @@ import { bytesToArray32, programConfigPda, voterRegistryPda } from "voting-share
 
 type VotingProgram = Program;
 
-const DEFAULT_PROGRAM_ID = "VotiNG1111111111111111111111111111111111111";
+const DEFAULT_PROGRAM_ID = "BbnG5ScQxQrvZVq5FiDEgH7zx8dK6qH9jN3DEUmJSiuc";
 const PACKAGE_ROOT = resolve(import.meta.dirname, "..");
 
 export interface ChainConfig {

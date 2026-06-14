@@ -1,17 +1,15 @@
 [toolchain]
 anchor_version = "0.32.1"
-# Solana 3.x (platform-tools v1.52+, edition2024). Pin active_release to Agave 3.1.15 locally;
-# `agave-install init 3.1.15` may report "Unknown release" — use the stable-* release dir instead.
 
 [features]
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-voting = "VotiNG1111111111111111111111111111111111111"
-
 [programs.devnet]
-voting = "VotiNG1111111111111111111111111111111111111"
+voting = "BbnG5ScQxQrvZVq5FiDEgH7zx8dK6qH9jN3DEUmJSiuc"
+
+[programs.localnet]
+voting = "BbnG5ScQxQrvZVq5FiDEgH7zx8dK6qH9jN3DEUmJSiuc"
 
 [registry]
 url = "https://api.apr.dev"
@@ -25,3 +23,5 @@ test = "npm run test --"
 
 [test]
 startup_wait = 15000
+shutdown_wait = 2000
+upgradeable = false
