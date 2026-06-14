@@ -93,12 +93,13 @@ cd infra/aws && terraform fmt -check && terraform validate
 
 ## Next Steps
 
-1. **Fund devnet wallet** — `solana config set --url devnet`; airdrop or faucet for `~/.config/solana/id.json`.
-2. **Deploy program** — `cd smart-contract && ./scripts/deploy-devnet.sh` (expect id `BbnG5…`).
-3. **Run chain lifecycle** — `cd tools/devnet-pipeline && npm run cli -- write-voter-list … && bootstrap && lifecycle` (save `proposal_id`).
-4. **AWS half** — configure credentials; package Lambdas; `terraform apply -var-file=dev.tfvars`; `./scripts/invoke-ingestion-lambda.sh`; `./scripts/verify-dynamodb-projection.sh <proposal_id>`.
-5. **Record E2E outcome** in `docs/progress/session_17.md` when the slice is green.
-6. **Deferred:** dependency audit execution (`docs/planning/deferred_dependency_audit_and_ci.md`).
+1. **CI baseline (ADR 0004, next session priority)** — implement `.github/workflows/ci.yml` Phase A per `docs/planning/ci_cd_roadmap.md`; then devnet slice below.
+2. **Fund devnet wallet** — `solana config set --url devnet`; airdrop or faucet for `~/.config/solana/id.json`.
+3. **Deploy program** — `cd smart-contract && ./scripts/deploy-devnet.sh` (expect id `BbnG5…`).
+4. **Run chain lifecycle** — `cd tools/devnet-pipeline && npm run cli -- write-voter-list … && bootstrap && lifecycle` (save `proposal_id`).
+5. **AWS half** — configure credentials; package Lambdas; `terraform apply -var-file=dev.tfvars`; `./scripts/invoke-ingestion-lambda.sh`; `./scripts/verify-dynamodb-projection.sh <proposal_id>`.
+6. **Record outcomes** in `docs/progress/session_17.md` (CI + E2E when green).
+7. **Deferred (Phase B CI):** dependency audit jobs (`docs/planning/deferred_dependency_audit_and_ci.md`).
 
 ## References
 

@@ -193,11 +193,22 @@ Schema evolution is additive only (new fields OK; no breaking renames). See `.cu
 
 ```bash
 npm install          # root dev tools (Prettier)
-npm run format       # Prettier on all TypeScript projects
+npm run format       # format all languages (scripts/format-all.sh)
 npm run format:check # CI-style format check
+bash scripts/format-all.sh           # same as npm run format
+bash scripts/format-all.sh --check     # same as npm run format:check
 npm run audit        # npm audit (3 TS packages) + govulncheck + cargo audit when installed
 npm run audit:production  # Ingestion Lambda runtime deps only
 ```
+
+`format-all.sh` runs, when tools are installed:
+
+| Layer | Tool | Scope |
+|-------|------|--------|
+| TypeScript | Prettier | `services/ingestion`, `tools/*`, `smart-contract/tests` |
+| Go | `gofmt` | `services/aggregator` |
+| Rust | `cargo fmt` | `smart-contract/` workspace |
+| Terraform | `terraform fmt` | `infra/aws`, `infra/gcp` |
 
 Optional installs for full audit coverage:
 

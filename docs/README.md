@@ -24,7 +24,7 @@ Process for ADRs: `.cursor/rules/adr_process.mdc`.
 
 ## Current pointers
 
-- **Active direction:** [`planning/agreed_direction_skip_votecast.md`](planning/agreed_direction_skip_votecast.md), [`planning/deferred_dependency_audit_and_ci.md`](planning/deferred_dependency_audit_and_ci.md)
+- **Active direction:** [`planning/ci_cd_roadmap.md`](planning/ci_cd_roadmap.md) (next session: CI Phase A), [`planning/agreed_direction_skip_votecast.md`](planning/agreed_direction_skip_votecast.md), [`planning/deferred_dependency_audit_and_ci.md`](planning/deferred_dependency_audit_and_ci.md) (audit only; format/test CI per ADR 0004)
 - **Decisions (review status):** [`ADR/README.md`](ADR/README.md)
 - **Latest session recap:** [`progress/session_16.md`](progress/session_16.md)
 - **Devnet + AWS pipeline runbook:** [`setup_devnet_pipeline.md`](setup_devnet_pipeline.md)

@@ -96,15 +96,20 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 
 ### Quality and CI/CD
 
-- **Lint and test:** TypeScript test/typecheck for Ingestion; Go lint/test for Aggregator; Rust lint/test for contract; run in CI.
-- **Build and deploy:** Build Ingestion Lambda zip (Node.js bundle) and Aggregator Lambda/binary; Terraform plan/apply for AWS (manual or automated apply for prod).
+- **ADR 0004** (`docs/ADR/0004-ci-cd-github-actions.md`) defines phased CI on GitHub Actions. Working checklist: `docs/planning/ci_cd_roadmap.md`.
+- **Phase A (next session — priority):** Single `.github/workflows/ci.yml` — `format-check` (`npm run format:check`), TypeScript tests (Ingestion + tools), Go tests (Aggregator), Rust (`voting-crypto` + fmt check), Terraform fmt/validate on branch **`main`**. Retire fragmented `smart-contract.yml` / `terraform.yml` after parity.
+- **Phase B (after Phase 3 step 7 devnet slice green):** `anchor test` in CI, dependency audit jobs, read-only `terraform plan`.
+- **Phase C (Phase 4+):** OIDC deploy, E2E in CI, branch protection, Forwarder/Analytics/UI jobs.
+- **Build and deploy (manual until Phase C):** Build Ingestion Lambda zip and Aggregator artifact; Terraform apply for AWS via maintainer workflow.
 - **Docs:** Repository structure, ADR for major choices, `docs/progress/` entry for Phase 1.
+
+**Current gap (pre–Phase A):** Only partial Rust tests and Terraform validate on legacy branch name `master`; Ingestion, Aggregator, and repo-wide format are not gated in CI.
 
 ## 1.3 Phase 1 Exit Criteria
 
 - A vote on chain results in an event in SQS, aggregator updates DynamoDB, and the gRPC read API returns updated proposal state (verifiable by a gRPC client or UI in Phase 2).
 - Idempotent handling of duplicate events verified, including at-least-once SQS delivery and retry after a failed projection write (Aggregator unit tests; compensating undo, not TransactWrite).
-- CI runs lint, tests, and Terraform plan successfully.
+- CI runs lint, tests, and Terraform **validate** successfully on every PR to `main` (ADR 0004 Phase A). Terraform **plan** in CI is Phase B; automated apply is Phase C.
 
 ### Phase 1 follow-ups (before production-hardened Aggregator)
 
@@ -170,7 +175,7 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 ### Quality and CI/CD
 
 - **Tests:** Unit and integration tests for forwarder and analytics (mocked Pub/Sub/BigQuery where appropriate); see `testing_go_services.mdc` and `testing_event_driven.mdc`.
-- **CI:** Build and deploy forwarder Lambda and analytics (Cloud Run); Terraform for GCP in same or separate workflows; no cross-cloud direct calls in tests.
+- **CI:** Extend **ADR 0004** `ci.yml` with Forwarder, Analytics, GCP Terraform, and UI jobs as those packages land (see development plan **CI/CD Roadmap** § Phase 2); no cross-cloud direct calls in tests.
 - **Event schema:** Confirm event schema is consistent for SQS and Pub/Sub (same JSON shape); document in `event_schema.mdc` if needed.
 
 ## 2.3 Phase 2 Exit Criteria
@@ -225,6 +230,7 @@ Tracked here so they are not lost; **not blockers** for closing the first Phase 
 ### Quality
 
 - Integration tests: devnet full lifecycle — commit → reveal → finalize; eligibility; freeze; gRPC `results_visible` behavior.
+- **CI (ADR 0004):** Step **10** — Phase A `ci.yml` is **next session priority**; Phase B (`anchor test`, audit) after step 7 devnet slice green.
 - **ADR (required before contract implementation):**
   - **`0003-commit-reveal-voting`** — commitment hash formula, salt storage, missed reveal policy, phase transitions.
   - **0001** — electorate enumeration (`list_hash`, Merkle leaves).
@@ -265,6 +271,7 @@ Goal: move from **defined** governance to **implemented and tested** on devnet. 
 | **7. E2E slice** | Devnet + UI policy | commit → reveal → finalize → results visible; ineligible commit fails |
 | **8. Docs** | `docs/progress/` entry; align `event_schema.mdc` with ADR fields | Implementable by others |
 | **9. Self-audit workshop** | Collaborative review session(s) with maintainer | Threat model, invariants, findings backlog in `docs/progress/` or `docs/planning/`; learning exercise only |
+| **10. CI baseline (ADR 0004)** | `.github/workflows/ci.yml` Phase A | **Next session priority** (can run in parallel with finishing step 7): format-check, TS/Go/Rust tests, Terraform validate on `main` |
 
 **Avoid:** deploying a long-lived “open vote” program to devnet if the team will treat it as the real governance program — prefer one deploy with eligibility, or clearly label legacy program ID.
 
@@ -333,7 +340,7 @@ Goal: move from **defined** governance to **implemented and tested** on devnet. 
 - **E2E tests:** Per `testing_e2e.mdc`: (1) proposal created on chain → event ingested and reflected in operational projection; (2) vote cast → aggregator and analytics updated; (3) event forwarded to GCP and in BigQuery; (4) duplicate event does not corrupt state; (5) failures visible (logs, DLQ). Optionally: UI flows (list, detail, live update).
 - **Load and resilience:** Load simulation tool or script to generate votes and verify throughput and stability; optional chaos (e.g. consumer restart, replay).
 - **Runbooks:** DLQ handling, consumer lag remediation, replay procedure, rollback steps.
-- **CI/CD:** OIDC for GitHub Actions where possible; Terraform plan/apply gates; secure secrets; no static long-lived credentials in repo.
+- **CI/CD:** Per **ADR 0004 Phase C** — OIDC for GitHub Actions where possible; Terraform plan/apply gates; secure secrets; no static long-lived credentials in repo; E2E workflow in CI.
 
 ## 4.3 Phase 4 Exit Criteria
 
@@ -403,6 +410,65 @@ Each phase delivers a **shippable slice**. Phase 5 delivers a **playable** syste
 
 ---
 
+# CI/CD Roadmap (cross-phase)
+
+Authoritative decision: **ADR 0004** (`docs/ADR/0004-ci-cd-github-actions.md`). Implementation checklist: `docs/planning/ci_cd_roadmap.md`.
+
+## Do immediately — Phase A (next session, priority)
+
+| Item | Deliverable | Blocks |
+|------|-------------|--------|
+| Unified workflow | `.github/workflows/ci.yml` | Partial Phase 1 exit criterion; contributor confidence |
+| Format gate | `npm run format:check` (`scripts/format-all.sh`) | Style drift on merge |
+| TypeScript | Ingestion + `tools/**` npm test/build | Regressions in event adapter and admin tooling |
+| Go | `services/aggregator` `go test ./...` | Projection/handler regressions |
+| Rust | `voting-crypto` tests + `cargo fmt --check` | Crypto/helper regressions |
+| Terraform | fmt + validate `infra/aws`, `infra/gcp` on **`main`** | Broken IaC merges |
+| Cleanup | Remove duplicate workflows after green run | CI minute waste, confusion |
+
+**Not in Phase A:** `anchor test`, audit jobs, `terraform plan`, deploy, E2E.
+
+## Do after devnet E2E slice — Phase B
+
+**When:** Phase 3 **step 7** verified per `docs/setup_devnet_pipeline.md` (and step 10 Phase A already green).
+
+| Item | Deliverable | Why wait |
+|------|-------------|----------|
+| `anchor-test` job | Solana + Anchor in GitHub runner | Runner setup cost; devnet runbook should be stable first |
+| `audit-deps` job | `npm run audit`, govulncheck, cargo audit policy | Mostly dev-deps noise until triage (`deferred_dependency_audit_and_ci.md`) |
+| `terraform-plan` | Read-only plan per root module | Needs cloud credentials or OIDC read role |
+| Path filter tuning | Narrow/noisy jobs | Informed by first month of PRs |
+
+## Do in Phase 2 (as services land)
+
+| Item | When |
+|------|------|
+| Forwarder Lambda build + test job | Forwarder service has tests |
+| Analytics (Go) test job | Analytics service in repo |
+| GCP Terraform in same `ci.yml` pattern | Phase 2 infra PRs |
+| Elixir `mix test` | Phase 2 UI first slice (`user_interface/`) |
+
+## Do in Phase 4+ — Phase C
+
+| Item | When |
+|------|------|
+| GitHub OIDC → AWS / GCP | Before automated `terraform apply` / deploy |
+| Deploy workflows (separate from PR `ci.yml`) | Production/staging promotion |
+| E2E in CI (scheduled or `workflow_dispatch`) | After E2E tests per `testing_e2e.mdc` |
+| Branch protection requiring Phase A checks | When `ci.yml` stable on `main` |
+
+## Mapping to phases
+
+| Phase | CI expectation |
+|-------|----------------|
+| **1** | Phase A closes lint/test/validate gap; deploy remains manual |
+| **2** | Add Forwarder, Analytics, UI, GCP jobs (Phase 2 table above) |
+| **3** | Phase A + step 10; Phase B after step 7 |
+| **4** | Phase C — OIDC, plan/apply, E2E, Grafana deploy hooks as needed |
+| **5** | Orchestrator/voting-ui package tests when added; optional load job |
+
+---
+
 # References
 
 - **Section 5 (High Level Architecture):** `architecture.mdc`
@@ -413,6 +479,7 @@ Each phase delivers a **shippable slice**. Phase 5 delivers a **playable** syste
 - **Testing:** `testing_e2e.mdc`, `testing_event_driven.mdc`, `testing_go_services.mdc`, `testing_smart_contract.mdc`
 - **User interface:** `user_interface/elixir_ui.mdc`, `user_interface/voting_ui.mdc` (primitive voting UI, Phase 5)
 - **Voter eligibility:** `architecture.mdc` §8, `event_schema.mdc` (eligibility events)
+- **CI/CD:** ADR **0004**, `docs/planning/ci_cd_roadmap.md`, `docs/planning/deferred_dependency_audit_and_ci.md`
 
 ---
 
