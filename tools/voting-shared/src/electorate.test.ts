@@ -80,9 +80,7 @@ describe("parseVoterListContent", () => {
   it("parses and sorts pubkeys from multiline content", () => {
     const golden = loadGolden();
     const reversed = [...golden.pubkeys_base58_sorted].reverse().join("\n");
-    expect(parseVoterListContent(reversed).map(voterBase58)).toEqual(
-      golden.pubkeys_base58_sorted
-    );
+    expect(parseVoterListContent(reversed).map(voterBase58)).toEqual(golden.pubkeys_base58_sorted);
   });
 
   it("ignores blank lines between valid pubkeys", () => {
@@ -184,9 +182,9 @@ describe("merkleProofForVoter", () => {
   });
 
   it("rejects a voter not in the electorate", () => {
-    expect(() => merkleProofForVoter(goldenElectorate(), "11111111111111111111111111111115")).toThrow(
-      /voter not in electorate/
-    );
+    expect(() =>
+      merkleProofForVoter(goldenElectorate(), "11111111111111111111111111111115")
+    ).toThrow(/voter not in electorate/);
   });
 });
 

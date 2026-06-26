@@ -8,22 +8,18 @@ Exports include `verifyMerkleProof` for proof validation at commit time.
 
 ## Modules
 
-| Export | Purpose |
-|--------|---------|
-| `merkle` | `merkleLeaf`, `merkleRoot`, `buildMerkleProof` |
-| `commitment` | `voteCommitment` |
-| `bytes` | `bytesToArray32`, `parseBytes32` |
-| `electorate` | voter list parse/build, `merkleProofForVoter` |
-| `pda` | program PDAs (registry, proposal, commitment, …) |
+| Export       | Purpose                                          |
+| ------------ | ------------------------------------------------ |
+| `merkle`     | `merkleLeaf`, `merkleRoot`, `buildMerkleProof`   |
+| `commitment` | `voteCommitment`                                 |
+| `bytes`      | `bytesToArray32`, `parseBytes32`                 |
+| `electorate` | voter list parse/build, `merkleProofForVoter`    |
+| `pda`        | program PDAs (registry, proposal, commitment, …) |
 
 ## Usage
 
 ```typescript
-import {
-  buildElectorateFromFile,
-  voteCommitment,
-  proposalPda,
-} from "voting-shared";
+import { buildElectorateFromFile, voteCommitment, proposalPda } from "voting-shared";
 ```
 
 Local dependency in tool `package.json`:

@@ -193,13 +193,27 @@ Schema evolution is additive only (new fields OK; no breaking renames). See `.cu
 
 ```bash
 npm install          # root dev tools (Prettier)
+npm run ci           # all Phase A checks (scripts/ci/ci.sh — same as GitHub Actions)
+npm run ci:format    # format-check only
+npm run ci:typescript
+npm run ci:go
+npm run ci:rust
+npm run ci:terraform
 npm run format       # format all languages (scripts/format-all.sh)
 npm run format:check # CI-style format check
 bash scripts/format-all.sh           # same as npm run format
 bash scripts/format-all.sh --check     # same as npm run format:check
 npm run audit        # npm audit (3 TS packages) + govulncheck + cargo audit when installed
 npm run audit:production  # Ingestion Lambda runtime deps only
+
+# Optional: format check before each commit (see docs/ci.md)
+pip install pre-commit && pre-commit install
+pre-commit run --all-files
 ```
+
+Full CI guide: **[`docs/ci.md`](docs/ci.md)** — architecture, phases, future improvements.
+
+`scripts/ci/ci.sh` runs ADR 0004 Phase A checks. Tool versions and package lists: `scripts/ci/manifest.env`. GitHub jobs use `.github/actions/ci-toolchains` + the same scripts. Use `SKIP_NPM_CI=1` when dependencies are already installed.
 
 `format-all.sh` runs, when tools are installed:
 

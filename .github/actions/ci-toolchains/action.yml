@@ -1,0 +1,60 @@
+# Composite action: install pinned toolchains for Phase A CI checks.
+# Versions are loaded from scripts/ci/manifest.env (not duplicated here).
+
+name: CI toolchains
+description: Install Node, Go, Rust, and/or Terraform for scripts/ci checks
+
+inputs:
+  profile:
+    description: "node | go | rust | terraform | all"
+    required: true
+  node-cache-path:
+    description: package-lock.json path for npm cache
+    required: false
+    default: package-lock.json
+
+runs:
+  using: composite
+  steps:
+    - name: Load toolchain versions from manifest
+      shell: bash
+      run: |
+        set -a
+        # shellcheck source=scripts/ci/manifest.env
+        source "${GITHUB_WORKSPACE}/scripts/ci/manifest.env"
+        set +a
+        {
+          echo "NODE_VERSION=$NODE_VERSION"
+          echo "GO_VERSION=$GO_VERSION"
+          echo "RUST_TOOLCHAIN=$RUST_TOOLCHAIN"
+          echo "TERRAFORM_VERSION=$TERRAFORM_VERSION"
+        } >> "$GITHUB_ENV"
+
+    - name: Setup Node.js
+      if: inputs.profile == 'node' || inputs.profile == 'all'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: npm
+        cache-dependency-path: ${{ inputs.node-cache-path }}
+
+    - name: Setup Go
+      if: inputs.profile == 'go' || inputs.profile == 'all'
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache-dependency-path: services/aggregator/go.sum
+
+    - name: Setup Rust
+      if: inputs.profile == 'rust' || inputs.profile == 'all'
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
+        components: rustfmt
+
+    - name: Setup Terraform
+      if: inputs.profile == 'terraform' || inputs.profile == 'all'
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TERRAFORM_VERSION }}
+        terraform_wrapper: false

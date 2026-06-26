@@ -6,11 +6,11 @@ Cryptography, electorate, and PDA helpers: [`../voting-shared/`](../voting-share
 
 ## Commands
 
-| Command | Purpose |
-|---------|---------|
-| `write-voter-list` | Write authority wallet pubkey to a one-line file |
-| `bootstrap` | `initialize_registry` + `update_merkle_root` from voter list |
-| `lifecycle` | Full voting lifecycle with phase waits |
+| Command            | Purpose                                                      |
+| ------------------ | ------------------------------------------------------------ |
+| `write-voter-list` | Write authority wallet pubkey to a one-line file             |
+| `bootstrap`        | `initialize_registry` + `update_merkle_root` from voter list |
+| `lifecycle`        | Full voting lifecycle with phase waits                       |
 
 ## Quick start
 

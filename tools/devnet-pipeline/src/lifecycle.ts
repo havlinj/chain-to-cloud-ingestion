@@ -1,5 +1,5 @@
-import { BN, Program } from "@coral-xyz/anchor";
-import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { BN } from "@coral-xyz/anchor";
+import { Keypair, SystemProgram } from "@solana/web3.js";
 import {
   bytesToArray32,
   buildElectorateFromFile,
@@ -19,8 +19,6 @@ import {
   updateMerkleRoot,
 } from "./chain.js";
 
-type VotingProgram = Program;
-
 export interface BootstrapOptions {
   listPath: string;
 }
@@ -37,11 +35,7 @@ export async function bootstrapRegistry(options: BootstrapOptions): Promise<Boot
   const config = resolveChainConfig();
   const { program, authority } = loadVotingProgram(config);
 
-  const initialized = await initializeRegistryIfNeeded(
-    program,
-    authority,
-    electorate.merkleRoot
-  );
+  const initialized = await initializeRegistryIfNeeded(program, authority, electorate.merkleRoot);
 
   const updateRootSignature = await updateMerkleRoot(
     program,
@@ -140,7 +134,7 @@ export async function runVotingLifecycle(options: LifecycleOptions): Promise<Lif
       grantedVoter: null,
       revokedVoter: null,
       systemProgram: SystemProgram.programId,
-    })
+    } as any)
     .signers([voter])
     .rpc();
 

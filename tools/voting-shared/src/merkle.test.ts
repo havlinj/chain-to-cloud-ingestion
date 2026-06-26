@@ -75,8 +75,8 @@ describe("verifyMerkleProof", () => {
     const tamperedSibling = Buffer.from(proof[0]);
     tamperedSibling[0] ^= 0xff;
 
-    expect(() => verifyMerkleProof(leaves[0], [tamperedSibling, ...proof.slice(1)], root, 0)).toThrow(
-      /merkle root mismatch/
-    );
+    expect(() =>
+      verifyMerkleProof(leaves[0], [tamperedSibling, ...proof.slice(1)], root, 0)
+    ).toThrow(/merkle root mismatch/);
   });
 });

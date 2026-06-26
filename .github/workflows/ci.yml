@@ -1,0 +1,140 @@
+# Unified CI baseline (ADR 0004 Phase A).
+# Commands: scripts/ci/ — versions: scripts/ci/manifest.env — tool setup: .github/actions/ci-toolchains
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      format: ${{ steps.filter.outputs.format }}
+      typescript: ${{ steps.filter.outputs.typescript }}
+      go: ${{ steps.filter.outputs.go }}
+      rust: ${{ steps.filter.outputs.rust }}
+      terraform: ${{ steps.filter.outputs.terraform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            format:
+              - '**'
+            typescript:
+              - 'services/ingestion/**'
+              - 'tools/**'
+              - 'scripts/ci/**'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+            go:
+              - 'services/aggregator/**'
+              - 'scripts/ci/**'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+            rust:
+              - 'smart-contract/**'
+              - 'scripts/ci/**'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+            terraform:
+              - 'infra/**'
+              - 'scripts/ci/**'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+
+  format-check:
+    name: Format check
+    needs: changes
+    if: needs.changes.outputs.format == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/ci-toolchains
+        with:
+          profile: all
+
+      - run: bash scripts/ci/format-check.sh
+
+  typescript:
+    name: TypeScript (${{ matrix.package }})
+    needs: changes
+    if: needs.changes.outputs.typescript == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keep in sync with TS_PACKAGES in scripts/ci/manifest.env (see docs/ci.md)
+        package:
+          - tools/voting-shared
+          - services/ingestion
+          - tools/eligibility-admin
+          - tools/devnet-pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/ci-toolchains
+        with:
+          profile: node
+          node-cache-path: ${{ matrix.package }}/package-lock.json
+
+      - run: bash scripts/ci/typescript.sh ${{ matrix.package }}
+
+  go-aggregator:
+    name: Go (aggregator)
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/ci-toolchains
+        with:
+          profile: go
+
+      - run: bash scripts/ci/go-aggregator.sh
+
+  rust-smart-contract:
+    name: Rust (smart contract)
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/ci-toolchains
+        with:
+          profile: rust
+
+      - run: bash scripts/ci/rust-smart-contract.sh
+
+  terraform:
+    name: Terraform (${{ matrix.stack }})
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keep in sync with TF_STACKS in scripts/ci/manifest.env
+        stack: [aws, gcp]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/ci-toolchains
+        with:
+          profile: terraform
+
+      - run: bash scripts/ci/terraform.sh ${{ matrix.stack }}

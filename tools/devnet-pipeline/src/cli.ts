@@ -100,13 +100,18 @@ async function cmdBootstrap(flags: Map<string, string | boolean>): Promise<void>
   console.log(`  list_hash: ${result.listHashHex}`);
 }
 
+function optionalStringFlag(
+  flags: Map<string, string | boolean>,
+  name: string
+): string | undefined {
+  const value = flags.get(name);
+  return typeof value === "string" ? value : undefined;
+}
+
 async function cmdLifecycle(flags: Map<string, string | boolean>): Promise<void> {
   const listPath = requireFlag(flags, "list");
-  const proposalId =
-    (typeof flags.get("proposal-id") === "string" && flags.get("proposal-id")) ||
-    `pipeline-${Date.now()}`;
-  const optionId =
-    (typeof flags.get("option") === "string" && flags.get("option")) || "1";
+  const proposalId = optionalStringFlag(flags, "proposal-id") ?? `pipeline-${Date.now()}`;
+  const optionId = optionalStringFlag(flags, "option") ?? "1";
   const commitSeconds = readPositiveIntFlag(flags, "commit-seconds", 20);
   const revealSeconds = readPositiveIntFlag(flags, "reveal-seconds", 50);
 
@@ -150,7 +155,9 @@ async function cmdLifecycle(flags: Map<string, string | boolean>): Promise<void>
   console.log(`  reveal_vote: ${result.revealSignature}`);
   console.log(`  finalize_proposal: ${result.finalizeSignature}`);
   console.log("");
-  console.log("Next: invoke Ingestion Lambda and verify DynamoDB (see docs/setup_devnet_pipeline.md)");
+  console.log(
+    "Next: invoke Ingestion Lambda and verify DynamoDB (see docs/setup_devnet_pipeline.md)"
+  );
 }
 
 async function cmdWriteVoterList(flags: Map<string, string | boolean>): Promise<void> {

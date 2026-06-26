@@ -1,43 +1,48 @@
 # CI/CD roadmap (working plan)
 
-**Status:** WIP — implementation tracked under **ADR 0004** (Accepted).  
-**Next session priority:** implement **Phase A** in `.github/workflows/ci.yml`.
+**Status:** WIP — Phase A implemented. See **[`docs/ci.md`](../ci.md)** for architecture and future improvements.  
+**Next:** green CI run on `main`; branch protection; devnet E2E slice (Phase 3 step 7).
 
-Authoritative schedule also lives in `.cursor/rules/development_plan.mdc` (section **CI/CD Roadmap**).
+Authoritative schedule: `.cursor/rules/development_plan.mdc` (CI/CD Roadmap). Improvement ideas by phase: [`docs/ci.md`](../ci.md) § Future improvements ladder.
 
 ---
 
-## Current baseline (Session 16)
+## Current baseline (Session 17)
 
 | Check | Local | CI |
 |-------|-------|-----|
-| `format-all.sh --check` | `npm run format:check` | ❌ |
-| Ingestion tests | `services/ingestion` npm test | ❌ |
-| Eligibility admin / devnet tools | per-package npm test | ❌ |
-| Aggregator | `go test ./...` | ❌ |
-| `voting-crypto` | `cargo test` | ✅ `smart-contract.yml` |
-| Smart contract fmt/clippy | manual | ❌ |
-| `anchor test` | local | ❌ |
-| Terraform fmt/validate | manual | ⚠️ `terraform.yml` on **`master` only** |
-| Dependency audit | `npm run audit` | ❌ deferred |
+| All Phase A checks | `npm run ci` / `scripts/ci/ci.sh` | ✅ `ci.yml` |
+| `format-check` | `scripts/ci/format-check.sh` | ✅ |
+| TypeScript packages | `scripts/ci/typescript.sh` | ✅ (matrix) |
+| Aggregator | `scripts/ci/go-aggregator.sh` | ✅ |
+| `voting-crypto` + fmt + host build | `scripts/ci/rust-smart-contract.sh` | ✅ |
+| Terraform fmt/validate | `scripts/ci/terraform.sh` | ✅ (`main`) |
+| `anchor test` | `smart-contract/scripts/run-all-tests.sh` | ❌ Phase B |
+| Dependency audit | `npm run audit` | ❌ Phase B |
+| Pre-commit (format) | `pre-commit run --all-files` | optional (local) |
 | Deploy / E2E | `docs/setup_devnet_pipeline.md` | ❌ |
 
----
+Manifest + composite action: [`scripts/ci/manifest.env`](../../scripts/ci/manifest.env), [`.github/actions/ci-toolchains`](../../.github/actions/ci-toolchains/action.yml).
 
-## Phase A — Do immediately (next session)
+## Phase A — baseline gate
 
-**ADR:** [0004-ci-cd-github-actions.md](../ADR/0004-ci-cd-github-actions.md) § Phase A.
+**ADR:** [0004-ci-cd-github-actions.md](../ADR/0004-ci-cd-github-actions.md) § Phase A.  
+**Docs:** [`docs/ci.md`](../ci.md).
 
-| # | Task | Owner / notes |
-|---|------|----------------|
-| A1 | Create `.github/workflows/ci.yml` with parallel jobs | Next session **#1 priority** |
-| A2 | Job `format-check`: `npm ci` + `npm run format:check` | Uses existing `scripts/format-all.sh` |
-| A3 | Job `typescript`: ingestion + tools TS packages | Path filter `services/ingestion/**`, `tools/**` |
-| A4 | Job `go-aggregator`: `go test ./...` | Path filter `services/aggregator/**` |
-| A5 | Job `rust-smart-contract`: fmt check + `voting-crypto` tests | Fold `smart-contract.yml` |
-| A6 | Job `terraform`: fmt + validate both roots | Fold `terraform.yml`; trigger **`main`** |
-| A7 | Delete redundant workflows after first green CI run | Avoid duplicate minutes |
-| A8 | Session progress doc + link PR | `docs/progress/session_17.md` |
+| # | Task | Status |
+|---|------|--------|
+| A1 | `.github/workflows/ci.yml` with parallel jobs | done |
+| A2 | `format-check` via `scripts/ci/format-check.sh` | done |
+| A3 | `typescript` — ingestion + tools | done |
+| A4 | `go-aggregator` | done |
+| A5 | `rust-smart-contract` | done |
+| A6 | `terraform` (aws + gcp) on `main` | done |
+| A7 | Retire `smart-contract.yml`, `terraform.yml` | done |
+| A8 | `docs/ci.md` + session progress | done |
+| A9 | `manifest.env` + composite `ci-toolchains` | done |
+| A10 | pre-commit (format) | done |
+| — | First green CI on `main` | pending |
+| — | Branch protection (optional) | pending |
 
 **Exit criteria:** A PR touching ingestion, aggregator, smart-contract, or infra gets the matching jobs; all Phase A jobs pass on `main`.
 
@@ -79,17 +84,18 @@ Authoritative schedule also lives in `.cursor/rules/development_plan.mdc` (secti
 ## Verification commands (local parity)
 
 ```bash
-# From repo root
-npm ci && npm run format:check
+# From repo root — same checks as .github/workflows/ci.yml
+npm ci && npm run ci
 
-cd services/ingestion && npm ci && npm test
-cd services/aggregator && go test ./...
-cd smart-contract/voting-crypto && cargo test
+# Or run individual steps:
+bash scripts/ci/format-check.sh
+bash scripts/ci/typescript.sh
+bash scripts/ci/go-aggregator.sh
+bash scripts/ci/rust-smart-contract.sh
+bash scripts/ci/terraform.sh
 
-terraform -chdir=infra/aws fmt -check -recursive
-terraform -chdir=infra/aws init -backend=false && terraform -chdir=infra/aws validate
-terraform -chdir=infra/gcp fmt -check -recursive
-terraform -chdir=infra/gcp init -backend=false && terraform -chdir=infra/gcp validate
+# Skip npm ci when deps are already installed:
+SKIP_NPM_CI=1 npm run ci
 ```
 
 `anchor test` — Phase B only; run locally from `smart-contract/` until CI job exists.

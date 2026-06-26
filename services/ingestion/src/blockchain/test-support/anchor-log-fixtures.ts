@@ -9,11 +9,25 @@ const programId = new PublicKey((votingIdl as { address: string }).address);
 
 type AnchorEventName = "ProposalCreated" | "VoteCommitted" | "VoteRevealed" | "ProposalFinalized";
 
-function encodeAnchorEvent(name: AnchorEventName, data: Record<string, unknown>): string {
-  const entry = coder.events.layouts.get(name);
+type EventLayoutEntry = {
+  discriminator: number[];
+  layout: {
+    encode: (data: Record<string, unknown>, buf: Buffer, offset: number) => number;
+  };
+};
+
+/** Anchor BorshEventCoder exposes decode only; test fixtures need encode via internal layouts. */
+function eventLayout(name: AnchorEventName): EventLayoutEntry {
+  const layouts = (coder.events as unknown as { layouts: Map<string, EventLayoutEntry> }).layouts;
+  const entry = layouts.get(name);
   if (!entry) {
     throw new Error(`unknown Anchor event: ${name}`);
   }
+  return entry;
+}
+
+function encodeAnchorEvent(name: AnchorEventName, data: Record<string, unknown>): string {
+  const entry = eventLayout(name);
   const bodyBuf = Buffer.alloc(8192);
   const bodyEnd = entry.layout.encode(data, bodyBuf, 0);
   const body = bodyBuf.subarray(0, bodyEnd);

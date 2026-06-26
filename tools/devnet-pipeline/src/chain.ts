@@ -6,7 +6,20 @@ import { join, resolve } from "path";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { bytesToArray32, programConfigPda, voterRegistryPda } from "voting-shared";
 
-type VotingProgram = Program;
+type ProgramConfigState = {
+  activeProposal: PublicKey | null;
+};
+
+export type VotingProgram = Program & {
+  account: {
+    programConfig: {
+      fetch: (address: PublicKey) => Promise<ProgramConfigState>;
+    };
+    proposal: {
+      fetch: (address: PublicKey) => Promise<unknown>;
+    };
+  };
+};
 
 const DEFAULT_PROGRAM_ID = "BbnG5ScQxQrvZVq5FiDEgH7zx8dK6qH9jN3DEUmJSiuc";
 const PACKAGE_ROOT = resolve(import.meta.dirname, "..");

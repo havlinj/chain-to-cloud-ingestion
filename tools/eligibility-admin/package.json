@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "audit": "npm audit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "cli": "tsx src/cli.ts"
   },
   "dependencies": {

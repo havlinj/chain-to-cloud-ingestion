@@ -5,6 +5,12 @@
   "scripts": {
     "format": "bash scripts/format-all.sh",
     "format:check": "bash scripts/format-all.sh --check",
+    "ci": "bash scripts/ci/ci.sh",
+    "ci:format": "bash scripts/ci/format-check.sh",
+    "ci:typescript": "bash scripts/ci/typescript.sh",
+    "ci:go": "bash scripts/ci/go-aggregator.sh",
+    "ci:rust": "bash scripts/ci/rust-smart-contract.sh",
+    "ci:terraform": "bash scripts/ci/terraform.sh",
     "audit": "bash scripts/audit-deps.sh",
     "audit:production": "bash scripts/audit-ingestion-production.sh"
   },

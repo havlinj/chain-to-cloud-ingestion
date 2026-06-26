@@ -72,12 +72,12 @@ npm run cli -- revoke --voter <base58>
 
 ## Environment
 
-| Variable            | Default                                       | Purpose                    |
-| ------------------- | --------------------------------------------- | -------------------------- |
-| `SOLANA_RPC_URL`    | `http://127.0.0.1:8899`                       | RPC endpoint               |
+| Variable            | Default                                                            | Purpose                    |
+| ------------------- | ------------------------------------------------------------------ | -------------------------- |
+| `SOLANA_RPC_URL`    | `http://127.0.0.1:8899`                                            | RPC endpoint               |
 | `VOTING_PROGRAM_ID` | `BbnG5ScQxQrvZVq5FiDEgH7zx8dK6qH9jN3DEUmJSiuc` (see `Anchor.toml`) | Program id                 |
-| `ANCHOR_WALLET`     | `~/.config/solana/id.json`                    | Registry authority keypair |
-| `VOTING_IDL_PATH`   | `../../smart-contract/target/idl/voting.json` | Anchor IDL                 |
+| `ANCHOR_WALLET`     | `~/.config/solana/id.json`                                         | Registry authority keypair |
+| `VOTING_IDL_PATH`   | `../../smart-contract/target/idl/voting.json`                      | Anchor IDL                 |
 
 ## Canonical list format
 

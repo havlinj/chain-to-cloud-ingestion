@@ -1,0 +1,13 @@
+# Pre-commit hooks — fast local feedback before push.
+# Install: pip install pre-commit && pre-commit install
+# See docs/ci.md § Pre-commit
+
+repos:
+  - repo: local
+    hooks:
+      - id: repo-format-check
+        name: repo format check
+        entry: bash scripts/format-all.sh --check
+        language: system
+        pass_filenames: false
+        always_run: true
