@@ -54,16 +54,25 @@ pre-commit run --all-files # after: pip install pre-commit && pre-commit install
 - **Layer 3:** `ci.yml` (`when`, parallel jobs, caches)
 - TypeScript matrix in YAML still lists packages explicitly; `manifest.env` is source of truth — dynamic matrix deferred (see `docs/ci.md`).
 
+### Follow-up (best-of-both alignment)
+
+- Restored **clippy** on `voting-crypto` in `scripts/ci/rust-smart-contract.sh` (+ `clippy` component in `ci-toolchains`).
+- Realigned planning docs with Session 17 CI done and AWS slice as next: `docs/planning/next_steps_cloud_integration.md`.
+
 ## Next Steps
 
 1. Push / PR → confirm green CI on GitHub
 2. Optional: branch protection requiring Phase A checks
-3. Devnet E2E slice (Phase 3 step 7) per `docs/setup_devnet_pipeline.md`
-4. Phase B CI when E2E green: `anchor-test`, audit, `terraform plan` — see `docs/ci.md` § Future improvements
+3. **AWS devnet slice** (Phase 3 step 7) — primary next work; runbook `docs/setup_devnet_pipeline.md`
+4. After slice: Aggregator **gRPC read API on ECS Fargate** — [`ADR 0005`](../ADR/0005-aggregator-read-api-ecs-fargate.md)
+5. Session order / cloud integration: [`docs/planning/next_steps_cloud_integration.md`](../planning/next_steps_cloud_integration.md)
+6. Phase B CI when E2E green: `anchor-test`, audit, `terraform plan` — see `docs/ci.md` § Future improvements
 
 ## References
 
 - `docs/ci.md`
 - `docs/ADR/0004-ci-cd-github-actions.md`
+- `docs/ADR/0005-aggregator-read-api-ecs-fargate.md`
 - `docs/planning/ci_cd_roadmap.md`
+- `docs/planning/next_steps_cloud_integration.md`
 - `docs/progress/session_16.md`

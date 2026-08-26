@@ -15,7 +15,7 @@ Authoritative schedule: `.cursor/rules/development_plan.mdc` (CI/CD Roadmap). Im
 | `format-check` | `scripts/ci/format-check.sh` | ✅ |
 | TypeScript packages | `scripts/ci/typescript.sh` | ✅ (matrix) |
 | Aggregator | `scripts/ci/go-aggregator.sh` | ✅ |
-| `voting-crypto` + fmt + host build | `scripts/ci/rust-smart-contract.sh` | ✅ |
+| `voting-crypto` + fmt + clippy + host build | `scripts/ci/rust-smart-contract.sh` | ✅ |
 | Terraform fmt/validate | `scripts/ci/terraform.sh` | ✅ (`main`) |
 | `anchor test` | `smart-contract/scripts/run-all-tests.sh` | ❌ Phase B |
 | Dependency audit | `npm run audit` | ❌ Phase B |

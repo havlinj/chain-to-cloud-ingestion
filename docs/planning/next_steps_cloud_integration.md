@@ -1,67 +1,81 @@
 # Next steps — cloud integration roadmap
 
-**Status:** WIP — agreed in planning discussion (2026-08-12).  
+**Status:** WIP — agreed 2026-08-12; **updated after Session 17** to match remote CI platform + ADR 0005.  
 **Supersedes:** informal chat only; does not replace `development_plan.mdc` phases.  
-**Related:** `docs/progress/session_16.md`, ADR **0004** (CI), ADR **0005** (read API on Fargate), `docs/setup_devnet_pipeline.md`
+**Related:** [`docs/ci.md`](../ci.md) (CI how-to), ADR **0004**, ADR **0005**, `docs/setup_devnet_pipeline.md`, `docs/progress/session_17.md`
 
 ---
 
-## Current baseline (after Session 16)
+## Current baseline (after Session 17)
 
 | Area | Status |
 |------|--------|
-| Smart contract (commit–reveal, eligibility) | Done — `anchor test` green |
+| Smart contract (commit–reveal, eligibility) | Done — `anchor test` green locally |
 | `tools/eligibility-admin`, `devnet-pipeline`, `voting-shared` | Done |
 | Ingestion + Aggregator (commit/reveal, `results_visible`) | Done + local pipeline E2E tests |
 | `infra/aws/` Terraform | Ready (SNS, SQS, DynamoDB, Lambdas, EventBridge) |
-| **Live devnet → AWS → DynamoDB** | **Not verified** (Phase 3 step 7) |
-| CI Phase A (`ci.yml`) | Planned — not implemented |
-| Aggregator gRPC read API | **Not implemented** — decision: ECS Fargate (ADR 0005) |
+| **CI Phase A** | **Done** — `scripts/ci/` + `ci.yml` + `docs/ci.md` (Session 17); confirm green run on GitHub after push |
+| **Live devnet → AWS → DynamoDB** | **Not verified** (Phase 3 step 7) — **next** |
+| Aggregator gRPC read API | **Not implemented** — decision: ECS Fargate ([ADR 0005](../ADR/0005-aggregator-read-api-ecs-fargate.md)) |
 | Eligibility audit projection | Not implemented |
 | Forwarder / Analytics / UI | Not started — GCP infra skeleton only |
+
+Local CI parity: `npm run ci` (see [`docs/ci.md`](../ci.md)).
 
 ---
 
 ## Agreed session order
 
-### Session 17 — CI baseline + AWS devnet slice (parallel OK)
+### Session 17 — CI platform (done)
+
+Delivered on remote + follow-ups: Phase A scripts, manifest, composite action, pre-commit, `docs/ci.md`. Recap: [`session_17.md`](../progress/session_17.md).
+
+| # | Task | Status |
+|---|------|--------|
+| 17a | Phase A CI (`scripts/ci/`, `ci.yml`, toolchains) | Done |
+| 17b–17e | AWS devnet slice | **Deferred to next session** (was originally bundled; CI landed first) |
+
+---
+
+### Next session — AWS devnet slice (Phase 3 step 7)
+
+First real cloud integration. Runbook: [`setup_devnet_pipeline.md`](../setup_devnet_pipeline.md).
 
 | # | Task | Cloud? | Notes |
 |---|------|--------|-------|
-| 17a | Implement `.github/workflows/ci.yml` Phase A | No | Per `docs/planning/ci_cd_roadmap.md` A1–A8 |
-| 17b | Fund devnet wallet, deploy program | Devnet only | `smart-contract/scripts/deploy-devnet.sh` |
-| 17c | `devnet-pipeline lifecycle` | Devnet only | Save `proposal_id` |
-| 17d | Package Lambdas, `terraform apply -var-file=dev.tfvars` | **AWS dev** | First real cloud integration |
-| 17e | Invoke ingestion, verify DynamoDB | **AWS dev** | `scripts/verify-dynamodb-projection.sh` |
-| 17f | Record in `docs/progress/session_17.md` | — | Exit criteria: Phase 3 step 7 checklist |
+| N1 | Fund devnet wallet, deploy program | Devnet | `smart-contract/scripts/deploy-devnet.sh` |
+| N2 | `devnet-pipeline` bootstrap + lifecycle | Devnet | Save `proposal_id` |
+| N3 | Package Lambdas, `terraform apply -var-file=dev.tfvars` | **AWS dev** | |
+| N4 | Invoke ingestion, verify DynamoDB | **AWS dev** | `scripts/verify-dynamodb-projection.sh` |
+| N5 | Record outcomes in `docs/progress/session_N.md` | — | Phase 3 step 7 checklist |
 
-**Why AWS first:** All code and Terraform exist; devnet is free; proves chain → Ingestion → SNS → SQS → Aggregator → DynamoDB before adding GCP or UI.
+**Why AWS first:** All code and Terraform exist; proves chain → Ingestion → SNS → SQS → Aggregator → DynamoDB before GCP or UI.
 
 **Do not start yet:** GCP `terraform apply`, Forwarder, BigQuery, UI.
 
 ---
 
-### Session 18 — Aggregator gRPC read API (AWS)
+### Following session — Aggregator gRPC read API (AWS)
 
 | # | Task | Notes |
 |---|------|-------|
-| 18a | `.proto` — `ListProposals`, `GetProposal` | Same contract for Elixir UI later |
-| 18b | `cmd/aggregator-api` — gRPC server, DynamoDB read-only | ADR 0005 |
-| 18c | Enforce `results_visible` — hide `option_counts` until finalize | UI policy |
-| 18d | Terraform — ECS Fargate + ALB | `infra/aws/` |
-| 18e | Smoke test — `grpcurl` against deployed dev service | Closes Phase 1 read path gap |
+| R1 | `.proto` — `ListProposals`, `GetProposal` | Same contract for Elixir UI later |
+| R2 | `cmd/aggregator-api` — gRPC server, DynamoDB read-only | ADR 0005 |
+| R3 | Enforce `results_visible` — hide `option_counts` until finalize | UI policy |
+| R4 | Terraform — ECS Fargate + ALB | `infra/aws/` |
+| R5 | Smoke test — `grpcurl` against deployed dev service | Closes Phase 1 read path gap |
 
 Consumer Lambda (`cmd/aggregator`) stays SQS-only; no gRPC in the Lambda binary.
 
 ---
 
-### Session 19 — Self-audit + eligibility audit projection
+### Then — Self-audit + eligibility audit projection
 
 | # | Task | Notes |
 |---|------|-------|
-| 19a | Self-audit workshop | `development_plan.mdc` Phase 3 step 9; contract feature freeze |
-| 19b | Aggregator eligibility audit table + handlers | Append-only from eligibility events |
-| 19c | CI Phase B (optional same session) | `anchor test`, `terraform plan` after step 7 green |
+| S1 | Self-audit workshop | `development_plan.mdc` Phase 3 step 9; contract feature freeze |
+| S2 | Aggregator eligibility audit table + handlers | Append-only from eligibility events |
+| S3 | CI Phase B (optional same session) | `anchor test`, `terraform plan` after step 7 green — see [`docs/ci.md`](../ci.md) |
 
 ---
 
@@ -74,7 +88,7 @@ Only after AWS devnet slice **and** read API smoke test are green.
 | 1 | GCP Terraform — Pub/Sub, BigQuery | GCP dev | AWS event bus working |
 | 2 | Forwarder Lambda | AWS → GCP | Forwarder SQS queue (already in AWS TF) |
 | 3 | Analytics service (Cloud Run) | GCP dev | Pub/Sub + BigQuery |
-| 4 | UI first slice (LiveView) | Local or Fly/Cloud Run | Aggregator gRPC on Fargate (session 18) |
+| 4 | UI first slice (LiveView) | Local or Fly/Cloud Run | Aggregator gRPC on Fargate |
 
 ---
 
@@ -92,8 +106,8 @@ Only after AWS devnet slice **and** read API smoke test are green.
 
 | Priority | Environment | What | When |
 |----------|-------------|------|------|
-| **1** | AWS `dev` | Devnet pipeline slice | Session 17 |
-| **2** | AWS `dev` | gRPC read API on Fargate | Session 18 |
+| **1** | AWS `dev` | Devnet pipeline slice | **Next** (after Session 17 CI) |
+| **2** | AWS `dev` | gRPC read API on Fargate | After AWS slice |
 | **3** | AWS `dev` + GCP `dev` | Forwarder → Pub/Sub | After 1–2 |
 | **4** | GCP `dev` | Analytics → BigQuery | After Forwarder |
 | **5** | Both | OIDC, Grafana, prod hardening | Phase 4 |
@@ -102,8 +116,8 @@ Only after AWS devnet slice **and** read API smoke test are green.
 
 ## Open gaps for Phase 3 exit (tracking)
 
+- [x] CI Phase A (Session 17; confirm green on GitHub)
 - [ ] Live devnet → AWS → DynamoDB (step 7)
-- [ ] CI Phase A
 - [ ] gRPC read API on Fargate (ADR 0005)
 - [ ] Eligibility audit projection
 - [ ] Self-audit workshop
@@ -112,7 +126,8 @@ Only after AWS devnet slice **and** read API smoke test are green.
 
 ## References
 
-- Runbook: `docs/setup_devnet_pipeline.md`
-- CI checklist: `docs/planning/ci_cd_roadmap.md`
-- Read API decision: `docs/ADR/0005-aggregator-read-api-ecs-fargate.md`
+- CI how-to: [`docs/ci.md`](../ci.md)
+- Runbook: [`setup_devnet_pipeline.md`](../setup_devnet_pipeline.md)
+- CI checklist: [`ci_cd_roadmap.md`](ci_cd_roadmap.md)
+- Read API decision: [`ADR/0005-aggregator-read-api-ecs-fargate.md`](../ADR/0005-aggregator-read-api-ecs-fargate.md)
 - Phased plan: `.cursor/rules/development_plan.mdc`

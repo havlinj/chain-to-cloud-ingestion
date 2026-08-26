@@ -98,9 +98,11 @@ pre-commit run --all-files
 | Format | `npm run ci:format` | `format-check` | `scripts/ci/format-check.sh` |
 | TypeScript | `npm run ci:typescript` | `typescript` (matrix) | `scripts/ci/typescript.sh` |
 | Go aggregator | `npm run ci:go` | `go-aggregator` | `scripts/ci/go-aggregator.sh` |
-| Rust smart contract | `npm run ci:rust` | `rust-smart-contract` | `scripts/ci/rust-smart-contract.sh` |
+| Rust smart contract | `npm run ci:rust` | `rust-smart-contract` | `scripts/ci/rust-smart-contract.sh` (`fmt`, `clippy -p voting-crypto -- -D warnings`, tests, host `cargo build -p voting`) |
 | Terraform | `npm run ci:terraform` | `terraform` (matrix) | `scripts/ci/terraform.sh` |
 | **All** | `npm run ci` | all applicable jobs | `scripts/ci/ci.sh` |
+
+**Rust note:** Clippy runs on `voting-crypto` only (not the full `voting` program host build). The `ci-toolchains` rust profile installs `rustfmt` and `clippy`.
 
 **Not in Phase A:** `anchor test`, dependency audit, `terraform plan`, deploy, E2E (see phases below).
 

@@ -119,13 +119,14 @@ cd infra/aws && terraform fmt -check && terraform validate
 
 ## Next Steps
 
-Agreed multi-session roadmap (2026-08-12): [`docs/planning/next_steps_cloud_integration.md`](../planning/next_steps_cloud_integration.md). Aggregator read API: **ECS Fargate** — ADR [`0005`](../ADR/0005-aggregator-read-api-ecs-fargate.md).
+Roadmap (updated after Session 17): [`docs/planning/next_steps_cloud_integration.md`](../planning/next_steps_cloud_integration.md). Aggregator read API: **ECS Fargate** — ADR [`0005`](../ADR/0005-aggregator-read-api-ecs-fargate.md). CI how-to: [`docs/ci.md`](../ci.md).
 
-1. **Session 17 — CI baseline (ADR 0004) + AWS devnet slice** — `ci.yml` Phase A; fund wallet; deploy program; `devnet-pipeline lifecycle`; `terraform apply`; verify DynamoDB.
-2. **Session 18 — gRPC read API on Fargate** — `.proto`, `cmd/aggregator-api`, Terraform ECS + ALB; `grpcurl` smoke test.
-3. **Session 19 — Self-audit workshop + eligibility audit projection.**
-4. **Later — GCP** (Forwarder → Pub/Sub → Analytics) only after AWS slice and read API are green.
-5. **Deferred (Phase B CI):** dependency audit jobs (`docs/planning/deferred_dependency_audit_and_ci.md`).
+1. **Session 17 — CI Phase A platform** — done (`scripts/ci/`, `ci.yml`, `docs/ci.md`); see [`session_17.md`](session_17.md).
+2. **Next — AWS devnet slice** (Phase 3 step 7) — fund wallet; deploy; `devnet-pipeline lifecycle`; `terraform apply`; verify DynamoDB.
+3. **Then — gRPC read API on Fargate** — ADR 0005; `.proto`, `cmd/aggregator-api`, ECS + ALB.
+4. **Then — Self-audit workshop + eligibility audit projection.**
+5. **Later — GCP** (Forwarder → Pub/Sub → Analytics) only after AWS slice and read API are green.
+6. **Deferred (Phase B CI):** dependency audit / `anchor test` — [`docs/ci.md`](../ci.md) § Future improvements.
 
 ## References
 

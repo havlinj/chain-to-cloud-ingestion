@@ -2,7 +2,7 @@
 # Versions are loaded from scripts/ci/manifest.env (not duplicated here).
 
 name: CI toolchains
-description: Install Node, Go, Rust, and/or Terraform for scripts/ci checks
+description: Install Node, Go, Rust (rustfmt+clippy), and/or Terraform for scripts/ci checks
 
 inputs:
   profile:
@@ -50,7 +50,7 @@ runs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ env.RUST_TOOLCHAIN }}
-        components: rustfmt
+        components: rustfmt, clippy
 
     - name: Setup Terraform
       if: inputs.profile == 'terraform' || inputs.profile == 'all'
