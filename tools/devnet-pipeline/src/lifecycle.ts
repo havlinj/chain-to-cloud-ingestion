@@ -127,12 +127,10 @@ export async function runVotingLifecycle(options: LifecycleOptions): Promise<Lif
       proof.merkleProof.map((p) => bytesToArray32(p)),
       proof.leafIndex
     )
-    .accounts({
+    .accountsPartial({
       voter: voter.publicKey,
       proposal,
       commitmentAccount,
-      grantedVoter: null,
-      revokedVoter: null,
       systemProgram: SystemProgram.programId,
     } as any)
     .signers([voter])

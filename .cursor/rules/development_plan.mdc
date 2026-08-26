@@ -78,14 +78,14 @@ This plan breaks each phase into **deliverables**, **infrastructure**, **service
 - **Language:** Go; structure per `service_style.mdc` (cmd, internal/domain, service, repository, handlers).
 - **Responsibilities:** Consume messages from SQS, deserialize and validate events, apply idempotent projection updates (dedup/upsert), update DynamoDB.
 - **Projections:** Proposals (`phase`, `commit_ends_at`, `reveal_ends_at`, `results_visible`, `option_counts` only after finalize); voter participation (`has_committed`, `has_revealed` per proposal). **Iteration 1:** `VoteCast` only — migrate to `VoteCommitted` / `VoteRevealed` with Phase 3 contract.
-- **Read API:** **gRPC** API (e.g. ListProposals, GetProposal; streaming in Phase 4) backed by DynamoDB; exposed via API Gateway (gRPC) or gRPC-Web proxy. Contract consumed by the user interface (Phase 2+); see `user_interface/` and `.cursor/rules/user_interface/elixir_ui.mdc`.
+- **Read API:** **gRPC** API (e.g. ListProposals, GetProposal; streaming in Phase 4) backed by DynamoDB; deployed as a **separate ECS Fargate service** (ADR **0005**), distinct from the SQS Lambda consumer. ALB in front for dev/prod; UI connects as gRPC client (Phase 2+). See `user_interface/` and `.cursor/rules/user_interface/elixir_ui.mdc`.
 - **Eligibility (deferred to Phase 3):** Phase 1 contract may allow any wallet for pipeline demos; **production-usable governance** requires the global Merkle allowlist and admin grant/revoke in Phase 3 (see below).
 - **Idempotency:** Required; use event_id or equivalent per `service_boundaries.mdc` and `coding_style.mdc`.
 - **Iteration 1 implementation:** `processed_events` table; read-check then apply projections; mark processed only after successful writes; compensating `UndoVoteCast` / `UndoRecordVoteCast` on partial failure or failed mark (see `services/aggregator/`). Unit tests cover duplicate delivery and SQS retry after voter failure.
 
 ### Infrastructure (AWS)
 
-- **Terraform:** VPC/network as needed, Lambda (ingestion), SQS, DynamoDB tables, IAM roles (least privilege), API Gateway (gRPC backend or gRPC-Web proxy), CloudWatch log groups.
+- **Terraform:** VPC/network as needed, Lambda (ingestion + aggregator consumer), ECS Fargate (aggregator read API per ADR **0005**), ALB, SQS, DynamoDB tables, IAM roles (least privilege), CloudWatch log groups.
 - **Environments:** At least `dev` and `prod` (or staging) via variables; naming per `terraform_style.mdc`.
 
 ### Observability (Phase 1)

@@ -1,5 +1,3 @@
-use bs58;
-
 /// Decode a Solana-style base58 public key to 32 bytes.
 pub fn decode_pubkey(input: &str) -> Result<[u8; 32], bs58::decode::Error> {
     let bytes = bs58::decode(input).into_vec()?;

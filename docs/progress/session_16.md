@@ -119,13 +119,13 @@ cd infra/aws && terraform fmt -check && terraform validate
 
 ## Next Steps
 
-1. **CI baseline (ADR 0004, next session priority)** — implement `.github/workflows/ci.yml` Phase A per `docs/planning/ci_cd_roadmap.md`; then devnet slice below.
-2. **Fund devnet wallet** — `solana config set --url devnet`; airdrop or faucet for `~/.config/solana/id.json`.
-3. **Deploy program** — `cd smart-contract && ./scripts/deploy-devnet.sh` (expect id `BbnG5…`).
-4. **Run chain lifecycle** — `cd tools/devnet-pipeline && npm run cli -- write-voter-list … && bootstrap && lifecycle` (save `proposal_id`).
-5. **AWS half** — configure credentials; package Lambdas; `terraform apply -var-file=dev.tfvars`; `./scripts/invoke-ingestion-lambda.sh`; `./scripts/verify-dynamodb-projection.sh <proposal_id>`.
-6. **Record outcomes** in `docs/progress/session_17.md` (CI + E2E when green).
-7. **Deferred (Phase B CI):** dependency audit jobs (`docs/planning/deferred_dependency_audit_and_ci.md`).
+Agreed multi-session roadmap (2026-08-12): [`docs/planning/next_steps_cloud_integration.md`](../planning/next_steps_cloud_integration.md). Aggregator read API: **ECS Fargate** — ADR [`0005`](../ADR/0005-aggregator-read-api-ecs-fargate.md).
+
+1. **Session 17 — CI baseline (ADR 0004) + AWS devnet slice** — `ci.yml` Phase A; fund wallet; deploy program; `devnet-pipeline lifecycle`; `terraform apply`; verify DynamoDB.
+2. **Session 18 — gRPC read API on Fargate** — `.proto`, `cmd/aggregator-api`, Terraform ECS + ALB; `grpcurl` smoke test.
+3. **Session 19 — Self-audit workshop + eligibility audit projection.**
+4. **Later — GCP** (Forwarder → Pub/Sub → Analytics) only after AWS slice and read API are green.
+5. **Deferred (Phase B CI):** dependency audit jobs (`docs/planning/deferred_dependency_audit_and_ci.md`).
 
 ## References
 
