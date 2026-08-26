@@ -1,20 +1,20 @@
 # Next steps — cloud integration roadmap
 
-**Status:** WIP — agreed 2026-08-12; **updated after Session 17** to match remote CI platform + ADR 0005.  
+**Status:** WIP — agreed 2026-08-12; updated after Session 17–18 (CI platform green path + `voting-shared` dist/).  
 **Supersedes:** informal chat only; does not replace `development_plan.mdc` phases.  
-**Related:** [`docs/ci.md`](../ci.md) (CI how-to), ADR **0004**, ADR **0005**, `docs/setup_devnet_pipeline.md`, `docs/progress/session_17.md`
+**Related:** [`docs/ci.md`](../ci.md), ADR **0004**, ADR **0005**, `docs/setup_devnet_pipeline.md`, [`session_17.md`](../progress/session_17.md), [`session_18.md`](../progress/session_18.md)
 
 ---
 
-## Current baseline (after Session 17)
+## Current baseline (after Session 18)
 
 | Area | Status |
 |------|--------|
 | Smart contract (commit–reveal, eligibility) | Done — `anchor test` green locally |
-| `tools/eligibility-admin`, `devnet-pipeline`, `voting-shared` | Done |
+| `tools/eligibility-admin`, `devnet-pipeline`, `voting-shared` | Done — shared builds to **`dist/`** (Session 18) |
 | Ingestion + Aggregator (commit/reveal, `results_visible`) | Done + local pipeline E2E tests |
 | `infra/aws/` Terraform | Ready (SNS, SQS, DynamoDB, Lambdas, EventBridge) |
-| **CI Phase A** | **Done** — `scripts/ci/` + `ci.yml` + `docs/ci.md` (Session 17); confirm green run on GitHub after push |
+| **CI Phase A** | **Done** — Session 17 platform + Session 18 clippy + TS matrix/`dist/` fixes; confirm green on GitHub |
 | **Live devnet → AWS → DynamoDB** | **Not verified** (Phase 3 step 7) — **next** |
 | Aggregator gRPC read API | **Not implemented** — decision: ECS Fargate ([ADR 0005](../ADR/0005-aggregator-read-api-ecs-fargate.md)) |
 | Eligibility audit projection | Not implemented |
@@ -28,12 +28,17 @@ Local CI parity: `npm run ci` (see [`docs/ci.md`](../ci.md)).
 
 ### Session 17 — CI platform (done)
 
-Delivered on remote + follow-ups: Phase A scripts, manifest, composite action, pre-commit, `docs/ci.md`. Recap: [`session_17.md`](../progress/session_17.md).
+Delivered: Phase A scripts, manifest, composite action, pre-commit, `docs/ci.md`. Recap: [`session_17.md`](../progress/session_17.md).
+
+### Session 18 — CI green path (done)
+
+Planning alignment, clippy gate, `voting-shared` → `dist/`, format fix. Recap: [`session_18.md`](../progress/session_18.md).
 
 | # | Task | Status |
 |---|------|--------|
-| 17a | Phase A CI (`scripts/ci/`, `ci.yml`, toolchains) | Done |
-| 17b–17e | AWS devnet slice | **Deferred to next session** (was originally bundled; CI landed first) |
+| 17a | Phase A CI (`scripts/ci/`, `ci.yml`, toolchains) | Done (Session 17) |
+| 18a | Docs/clippy/`voting-shared` dist/ for green Actions | Done (Session 18) |
+| AWS slice | Was deferred from original “Session 17 bundle” | **Next** |
 
 ---
 
@@ -116,7 +121,7 @@ Only after AWS devnet slice **and** read API smoke test are green.
 
 ## Open gaps for Phase 3 exit (tracking)
 
-- [x] CI Phase A (Session 17; confirm green on GitHub)
+- [x] CI Phase A (Sessions 17–18; confirm green on GitHub)
 - [ ] Live devnet → AWS → DynamoDB (step 7)
 - [ ] gRPC read API on Fargate (ADR 0005)
 - [ ] Eligibility audit projection
@@ -130,4 +135,5 @@ Only after AWS devnet slice **and** read API smoke test are green.
 - Runbook: [`setup_devnet_pipeline.md`](../setup_devnet_pipeline.md)
 - CI checklist: [`ci_cd_roadmap.md`](ci_cd_roadmap.md)
 - Read API decision: [`ADR/0005-aggregator-read-api-ecs-fargate.md`](../ADR/0005-aggregator-read-api-ecs-fargate.md)
+- Progress: [`session_17.md`](../progress/session_17.md), [`session_18.md`](../progress/session_18.md)
 - Phased plan: `.cursor/rules/development_plan.mdc`

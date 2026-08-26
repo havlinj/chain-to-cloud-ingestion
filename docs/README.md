@@ -28,5 +28,5 @@ Process for ADRs: `.cursor/rules/adr_process.mdc`.
 - **CI checklist (WIP):** [`planning/ci_cd_roadmap.md`](planning/ci_cd_roadmap.md)
 - **Active direction:** [`planning/next_steps_cloud_integration.md`](planning/next_steps_cloud_integration.md) (AWS slice next; Fargate ADR 0005), [`planning/agreed_direction_skip_votecast.md`](planning/agreed_direction_skip_votecast.md), [`planning/deferred_dependency_audit_and_ci.md`](planning/deferred_dependency_audit_and_ci.md)
 - **Decisions (review status):** [`ADR/README.md`](ADR/README.md)
-- **Latest session recap:** [`progress/session_17.md`](progress/session_17.md)
+- **Latest session recap:** [`progress/session_18.md`](progress/session_18.md)
 - **Devnet + AWS pipeline runbook:** [`setup_devnet_pipeline.md`](setup_devnet_pipeline.md)
