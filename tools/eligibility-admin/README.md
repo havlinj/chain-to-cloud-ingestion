@@ -24,6 +24,7 @@ cd ../eligibility-admin && npm install
 ```
 
 `eligibility-admin` depends on `voting-shared` via `file:../voting-shared` and imports the compiled `dist/` output.
+
 ## Commands
 
 ### Build (offline)
