@@ -39,6 +39,7 @@ How continuous integration works in this repository: what runs where, how to rep
 | [`scripts/ci/*.sh`](../scripts/ci/) | One script per check domain (format, TypeScript, Go, Rust, Terraform) |
 | [`.github/actions/ci-toolchains/`](../.github/actions/ci-toolchains/action.yml) | Composite action — installs toolchains from `manifest.env` |
 | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | PR/push workflow — path filters, parallel jobs, calls scripts |
+| [`tools/voting-shared/`](../tools/voting-shared/) | Shared TS library — builds to `dist/`; CI builds it before dependent tool packages |
 | [`.pre-commit-config.yaml`](../.pre-commit-config.yaml) | Optional hook — format check before each commit |
 | [`scripts/format-all.sh`](../scripts/format-all.sh) | Format write/check (used by pre-commit and `format-check` job) |
 
@@ -284,7 +285,8 @@ Optional upgrades — adopt when the trigger applies. Do not implement all at on
 1. Add path to `TS_PACKAGES` in `scripts/ci/manifest.env`.
 2. Add the same path to the `matrix.package` list in `.github/workflows/ci.yml`.
 3. Ensure the package has `package-lock.json`, `npm test`, and `npm run typecheck`.
-4. Run `npm run ci:typescript` locally.
+4. If the package depends on `voting-shared` via `file:../voting-shared`, extend `scripts/ci/typescript.sh` so the job builds `tools/voting-shared` (`npm ci` + `npm run build` → `dist/`) before the dependent package. Consumers resolve compiled JS + `.d.ts`, not `src/`.
+5. Run `npm run ci:typescript` locally.
 
 ---
 

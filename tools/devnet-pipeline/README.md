@@ -15,8 +15,8 @@ Cryptography, electorate, and PDA helpers: [`../voting-shared/`](../voting-share
 ## Quick start
 
 ```bash
-cd tools/devnet-pipeline
-npm install
+cd tools/voting-shared && npm install && npm run build
+cd ../devnet-pipeline && npm install
 
 export SOLANA_RPC_URL=https://api.devnet.solana.com
 export ANCHOR_WALLET=~/.config/solana/id.json
@@ -25,6 +25,8 @@ npm run cli -- write-voter-list --write-voter-list /tmp/voters.txt
 npm run cli -- bootstrap --list /tmp/voters.txt
 npm run cli -- lifecycle --list /tmp/voters.txt
 ```
+
+`devnet-pipeline` depends on `voting-shared` via `file:../voting-shared` (compiled `dist/`).
 
 Full AWS runbook: [`docs/setup_devnet_pipeline.md`](../../docs/setup_devnet_pipeline.md).
 

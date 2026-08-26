@@ -1,4 +1,5 @@
 node_modules/
+dist/
 
 # Solana local validator data (solana-test-validator, anchor test)
 **/test-ledger/

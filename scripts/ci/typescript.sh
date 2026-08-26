@@ -4,6 +4,9 @@
 # Usage:
 #   scripts/ci/typescript.sh                         # all packages
 #   scripts/ci/typescript.sh services/ingestion    # one package
+#
+# tools/voting-shared exports compiled dist/ (not src/). Dependent packages
+# (eligibility-admin, devnet-pipeline) need a built voting-shared before typecheck.
 
 set -euo pipefail
 
@@ -14,6 +17,13 @@ load_manifest
 # shellcheck disable=SC2206
 TS_PACKAGES=($TS_PACKAGES)
 
+ensure_voting_shared_built() {
+  local shared="$ROOT/tools/voting-shared"
+  ci_npm_ci "$shared"
+  log "Build tools/voting-shared → dist/"
+  (cd "$shared" && npm run build)
+}
+
 run_typescript_package() {
   local pkg="$1"
   local dir="$ROOT/$pkg"
@@ -22,8 +32,22 @@ run_typescript_package() {
   fi
   require_cmd npm "https://nodejs.org"
   log "TypeScript: $pkg"
-  ci_npm_ci "$dir"
-  (cd "$dir" && npm test && npm run typecheck)
+
+  case "$pkg" in
+    tools/voting-shared)
+      ci_npm_ci "$dir"
+      (cd "$dir" && npm test && npm run typecheck && npm run build)
+      ;;
+    tools/eligibility-admin | tools/devnet-pipeline)
+      ensure_voting_shared_built
+      ci_npm_ci "$dir"
+      (cd "$dir" && npm test && npm run typecheck)
+      ;;
+    *)
+      ci_npm_ci "$dir"
+      (cd "$dir" && npm test && npm run typecheck)
+      ;;
+  esac
 }
 
 if [[ $# -eq 0 ]]; then

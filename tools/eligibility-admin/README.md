@@ -19,10 +19,11 @@ anchor build   # produces target/idl/voting.json
 ## Install
 
 ```bash
-cd tools/eligibility-admin
-npm install
+cd tools/voting-shared && npm install && npm run build
+cd ../eligibility-admin && npm install
 ```
 
+`eligibility-admin` depends on `voting-shared` via `file:../voting-shared` and imports the compiled `dist/` output.
 ## Commands
 
 ### Build (offline)
